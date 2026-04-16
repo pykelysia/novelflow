@@ -1,0 +1,24 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+# TODO: MySQL 配置（外部实现，配置预留）
+database:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "password"
+  dbname: "novelflow"
+
+# TODO: Redis 配置（外部实现，配置预留）
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  access_secret: "your-access-secret-key"
+  refresh_secret: "your-refresh-secret-key"
+  access_expire: 3600        # 1小时
+  refresh_expire: 604800     # 7天
