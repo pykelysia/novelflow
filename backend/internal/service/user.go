@@ -1,25 +1,23 @@
 package service
 
 import (
-	"novelflow/backend/internal/model"
-	"novelflow/backend/internal/repository"
+	"novelflow/database"
 )
 
 // UserService 用户服务
 type UserService struct {
-	userRepo *repository.UserRepository
+	userRepo database.UserRepository
 }
 
 // NewUserService 创建用户服务
-func NewUserService(userRepo *repository.UserRepository) *UserService {
+func NewUserService(userRepo database.UserRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
 }
 
 // GetUserByID 根据 ID 获取用户
-func (s *UserService) GetUserByID(id uint) (*model.User, error) {
-	// TODO: 外部实现 MySQL 查询用户
+func (s *UserService) GetUserByID(id uint) (*database.User, error) {
 	user, err := s.userRepo.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -28,14 +26,12 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 }
 
 // GetAllUsers 获取所有用户
-func (s *UserService) GetAllUsers() ([]*model.User, error) {
-	// TODO: 外部实现 MySQL 查询所有用户
+func (s *UserService) GetAllUsers() ([]*database.User, error) {
 	return s.userRepo.FindAll()
 }
 
 // UpdateUser 更新用户
-func (s *UserService) UpdateUser(id uint, req *model.UpdateUserRequest) (*model.User, error) {
-	// TODO: 外部实现 MySQL 更新用户
+func (s *UserService) UpdateUser(id uint, req *database.UpdateUserRequest) (*database.User, error) {
 	user, err := s.userRepo.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -55,7 +51,6 @@ func (s *UserService) UpdateUser(id uint, req *model.UpdateUserRequest) (*model.
 		user.Status = *req.Status
 	}
 
-	// TODO: 外部实现 MySQL 保存更新
 	if err := s.userRepo.Update(user); err != nil {
 		return nil, ErrUpdateFailed
 	}
@@ -65,7 +60,6 @@ func (s *UserService) UpdateUser(id uint, req *model.UpdateUserRequest) (*model.
 
 // DeleteUser 删除用户
 func (s *UserService) DeleteUser(id uint) error {
-	// TODO: 外部实现 MySQL 删除用户
 	if err := s.userRepo.Delete(id); err != nil {
 		return ErrDeleteFailed
 	}

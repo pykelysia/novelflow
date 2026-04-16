@@ -3,19 +3,18 @@ package service
 import (
 	"errors"
 
-	"novelflow/backend/internal/model"
-	"novelflow/backend/internal/repository"
 	"novelflow/backend/pkg/jwt"
+	"novelflow/database"
 )
 
 // AuthService 认证服务
 type AuthService struct {
-	userRepo *repository.UserRepository
+	userRepo database.UserRepository
 	jwtUtil  *jwt.JWT
 }
 
 // NewAuthService 创建认证服务
-func NewAuthService(userRepo *repository.UserRepository, jwtUtil *jwt.JWT) *AuthService {
+func NewAuthService(userRepo database.UserRepository, jwtUtil *jwt.JWT) *AuthService {
 	return &AuthService{
 		userRepo: userRepo,
 		jwtUtil:  jwtUtil,
@@ -51,13 +50,12 @@ type RegisterRequest struct {
 
 // Login 用户登录
 func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
-	// TODO: 外部实现 MySQL 查询用户
 	user, err := s.userRepo.FindByUsername(req.Username)
 	if err != nil {
 		return nil, ErrInvalidCredential
 	}
 
-	// 验证密码（TODO: 外部实现密码验证）
+	// 验证密码
 	if !s.userRepo.VerifyPassword(user, req.Password) {
 		return nil, ErrInvalidCredential
 	}
@@ -81,14 +79,13 @@ func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
 	return &TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    3600, // TODO: 从配置获取
+		ExpiresIn:    3600,
 		TokenType:    "Bearer",
 	}, nil
 }
 
 // Register 用户注册
-func (s *AuthService) Register(req *RegisterRequest) (*model.User, error) {
-	// TODO: 外部实现 MySQL 检查用户是否存在
+func (s *AuthService) Register(req *RegisterRequest) (*database.User, error) {
 	exists, err := s.userRepo.ExistsByUsername(req.Username)
 	if err != nil {
 		return nil, err
@@ -109,19 +106,18 @@ func (s *AuthService) Register(req *RegisterRequest) (*model.User, error) {
 	}
 
 	// 创建用户
-	user := &model.User{
+	user := &database.User{
 		Username: req.Username,
 		Email:    req.Email,
 		Nickname: req.Nickname,
 		Status:   1,
 	}
 
-	// 密码加密（TODO: 外部实现密码加密）
+	// 密码加密
 	if err := s.userRepo.HashPassword(user, req.Password); err != nil {
 		return nil, err
 	}
 
-	// TODO: 外部实现 MySQL 保存用户
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
@@ -137,7 +133,6 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 		return nil, err
 	}
 
-	// TODO: 外部实现 MySQL 查询用户
 	user, err := s.userRepo.FindByID(claims.UserID)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -169,6 +164,6 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 
 // Logout 用户登出
 func (s *AuthService) Logout(token string) error {
-	// TODO: 外部实现 Redis 将令牌加入黑名单
+	// TODO: 实现 Redis 将令牌加入黑名单
 	return nil
 }

@@ -3,9 +3,9 @@ package internal
 import (
 	"novelflow/backend/internal/handler"
 	"novelflow/backend/internal/middleware"
-	"novelflow/backend/internal/repository"
 	"novelflow/backend/internal/service"
 	"novelflow/backend/pkg/jwt"
+	"novelflow/database"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +23,7 @@ func SetupRoutes(router *gin.Engine) {
 	)
 
 	// 初始化仓储层
-	userRepo := repository.NewUserRepository()
+	userRepo := database.NewUserRepository(database.GetDB())
 
 	// 初始化服务层
 	authService := service.NewAuthService(userRepo, jwtUtil)

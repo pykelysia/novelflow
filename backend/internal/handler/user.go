@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strconv"
 
-	"novelflow/backend/internal/model"
 	"novelflow/backend/internal/response"
 	"novelflow/backend/internal/service"
+	"novelflow/database"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,7 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} response.Response{data=[]model.UserResponse}
+// @Success 200 {object} response.Response{data=[]database.UserResponse}
 // @Router /users [get]
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	users, err := h.userService.GetAllUsers()
@@ -39,7 +39,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	var responses []*model.UserResponse
+	var responses []*database.UserResponse
 	for _, user := range users {
 		responses = append(responses, user.ToResponse())
 	}
@@ -55,7 +55,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "用户ID"
-// @Success 200 {object} response.Response{data=model.UserResponse}
+// @Success 200 {object} response.Response{data=database.UserResponse}
 // @Failure 404 {object} response.Response
 // @Router /users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
@@ -87,8 +87,8 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "用户ID"
-// @Param request body model.UpdateUserRequest true "更新信息"
-// @Success 200 {object} response.Response{data=model.UserResponse}
+// @Param request body database.UpdateUserRequest true "更新信息"
+// @Success 200 {object} response.Response{data=database.UserResponse}
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Router /users/{id} [put]
@@ -100,7 +100,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var req model.UpdateUserRequest
+	var req database.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return
