@@ -2,81 +2,47 @@ package config
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/spf13/viper"
 )
 
-// Config 全局配置结构
-type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-}
-
-// ServerConfig 服务器配置
-type ServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
-}
-
-// DatabaseConfig 数据库配置（TODO: 外部实现）
-type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
-	DBName   string `mapstructure:"dbname"`
-}
-
-// RedisConfig Redis 配置（TODO: 外部实现）
-type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-}
-
-// JWTConfig JWT 配置
-type JWTConfig struct {
-	AccessSecret  string `mapstructure:"access_secret"`
-	RefreshSecret string `mapstructure:"refresh_secret"`
-	AccessExpire  int    `mapstructure:"access_expire"`
-	RefreshExpire int    `mapstructure:"refresh_expire"`
-}
-
-var GlobalConfig *Config
-
-// LoadConfig 加载配置文件
-func LoadConfig(path string) (*Config, error) {
+// LoadConfig 加载配置文件，使用 BindEnv 实现环境变量读取
+func LoadConfig(path string) error {
+	// 设置配置文件
 	viper.SetConfigFile(path)
 	viper.SetConfigType("yaml")
 
+	// 读取配置文件作为默认值
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	}
+	// 设置环境变量前缀
+	viper.SetEnvPrefix("NOVELFLOW")
 
-	GlobalConfig = &config
-	return &config, nil
-}
+	// 绑定环境变量，使用 BindEnv 将具体配置路径绑定到环境变量
+	// Server 配置
+	viper.BindEnv("server.host", "NOVELFLOW_SERVER_HOST")
+	viper.BindEnv("server.port", "NOVELFLOW_SERVER_PORT")
 
-// GetServerAddr 获取服务器地址
-func (c *Config) GetServerAddr() string {
-	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
-}
+	// Database 配置
+	viper.BindEnv("database.host", "NOVELFLOW_DATABASE_HOST")
+	viper.BindEnv("database.port", "NOVELFLOW_DATABASE_PORT")
+	viper.BindEnv("database.username", "NOVELFLOW_DATABASE_USERNAME")
+	viper.BindEnv("database.password", "NOVELFLOW_DATABASE_PASSWORD")
+	viper.BindEnv("database.dbname", "NOVELFLOW_DATABASE_DBNAME")
 
-// GetAccessExpireDuration 获取访问令牌过期时间
-func (c *Config) GetAccessExpireDuration() time.Duration {
-	return time.Duration(c.JWT.AccessExpire) * time.Second
-}
+	// Redis 配置
+	viper.BindEnv("redis.host", "NOVELFLOW_REDIS_HOST")
+	viper.BindEnv("redis.port", "NOVELFLOW_REDIS_PORT")
+	viper.BindEnv("redis.password", "NOVELFLOW_REDIS_PASSWORD")
+	viper.BindEnv("redis.db", "NOVELFLOW_REDIS_DB")
 
-// GetRefreshExpireDuration 获取刷新令牌过期时间
-func (c *Config) GetRefreshExpireDuration() time.Duration {
-	return time.Duration(c.JWT.RefreshExpire) * time.Second
+	// JWT 配置
+	viper.BindEnv("jwt.access_secret", "NOVELFLOW_JWT_ACCESS_SECRET")
+	viper.BindEnv("jwt.refresh_secret", "NOVELFLOW_JWT_REFRESH_SECRET")
+	viper.BindEnv("jwt.access_expire", "NOVELFLOW_JWT_ACCESS_EXPIRE")
+	viper.BindEnv("jwt.refresh_expire", "NOVELFLOW_JWT_REFRESH_EXPIRE")
+
+	return nil
 }

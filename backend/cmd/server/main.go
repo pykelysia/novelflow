@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"novelflow/backend/config"
 	"novelflow/backend/internal/handler"
@@ -11,21 +13,21 @@ import (
 	"novelflow/backend/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 func main() {
 	// 加载配置
-	cfg, err := config.LoadConfig("config/config.yaml")
-	if err != nil {
+	if err := config.LoadConfig("config/config.yaml"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
 	// 初始化 JWT
 	jwtUtil := jwt.NewJWT(
-		cfg.JWT.AccessSecret,
-		cfg.JWT.RefreshSecret,
-		cfg.GetAccessExpireDuration(),
-		cfg.GetRefreshExpireDuration(),
+		viper.GetString("jwt.access_secret"),
+		viper.GetString("jwt.refresh_secret"),
+		time.Duration(viper.GetInt("jwt.access_expire"))*time.Second,
+		time.Duration(viper.GetInt("jwt.refresh_expire"))*time.Second,
 	)
 
 	// 初始化仓储层
@@ -72,7 +74,7 @@ func main() {
 	})
 
 	// 启动服务器
-	addr := cfg.GetServerAddr()
+	addr := fmt.Sprintf("%s:%d", viper.GetString("server.host"), viper.GetInt("server.port"))
 	log.Printf("Server starting on %s", addr)
 	if err := router.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
