@@ -50,4 +50,10 @@ func bindEnvVariables() {
 	viper.BindEnv("jwt.refresh_secret", "NOVELFLOW_JWT_REFRESH_SECRET")
 	viper.BindEnv("jwt.access_expire", "NOVELFLOW_JWT_ACCESS_EXPIRE")
 	viper.BindEnv("jwt.refresh_expire", "NOVELFLOW_JWT_REFRESH_EXPIRE")
+
+	// Model 配置
+	viper.BindEnv("llm.model_name")
+	viper.BindEnv("llm.base_url")
+	viper.BindEnv("llm.api_key")
+
 }
