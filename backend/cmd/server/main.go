@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"novelflow/backend/internal"
+	"novelflow/cache"
 	"novelflow/config"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,12 @@ func main() {
 	// 加载配置
 	if err := config.LoadConfig("config/config.yaml"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// 初始化 Redis
+	err := cache.InitRedis()
+	if err != nil {
+		log.Fatalf("Failed to init redis: %v", err)
 	}
 
 	// 创建 Gin 路由器

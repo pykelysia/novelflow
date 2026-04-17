@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"context"
 	"strings"
 
 	"novelflow/backend/internal/response"
 	"novelflow/backend/pkg/jwt"
+	"novelflow/cache"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +41,21 @@ func AuthMiddleware(jwtUtil *jwt.JWT) gin.HandlerFunc {
 			}
 			c.Abort()
 			return
+		}
+
+		// 验证是否在黑名单中
+		if claims.ID != "" {
+			inBlacklist, err := cache.IsJWTInBlacklist(context.Background(), claims.ID)
+			if err != nil {
+				response.InternalServerError(c, "failed to check token blacklist")
+				c.Abort()
+				return
+			}
+			if inBlacklist {
+				response.Unauthorized(c, "token has been revoked")
+				c.Abort()
+				return
+			}
 		}
 
 		// 将用户信息存储到上下文

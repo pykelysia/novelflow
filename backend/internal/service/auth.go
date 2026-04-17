@@ -31,8 +31,6 @@ type LoginRequest struct {
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	TokenType    string `json:"token_type"`
 }
 
 // RefreshRequest 刷新请求
@@ -79,8 +77,6 @@ func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
 	return &TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    3600,
-		TokenType:    "Bearer",
 	}, nil
 }
 
@@ -157,8 +153,6 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 	return &TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    3600,
-		TokenType:    "Bearer",
 	}, nil
 }
 
