@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"novelflow/backend/pkg/jwt"
+	"novelflow/cache"
 	"novelflow/database"
 )
 
@@ -35,6 +37,12 @@ type TokenResponse struct {
 
 // RefreshRequest 刷新请求
 type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+// LogoutRequest 登出请求
+type LogoutRequest struct {
+	AccessToken  string `json:"access_token" binding:"required"`
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
@@ -157,7 +165,11 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 }
 
 // Logout 用户登出
-func (s *AuthService) Logout(token string) error {
-	// TODO: 实现 Redis 将令牌加入黑名单
+func (s *AuthService) Logout(req *LogoutRequest) error {
+	ctx := context.Background()
+
+	_ = cache.AddJWTToBlacklist(ctx, req.AccessToken)
+	_ = cache.AddJWTToBlacklist(ctx, req.RefreshToken)
+
 	return nil
 }

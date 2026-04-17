@@ -71,20 +71,20 @@ func Close() error {
 }
 
 // AddJWTToBlacklist 将JWT添加到黑名单
-func AddJWTToBlacklist(ctx context.Context, tokenID string) error {
+func AddJWTToBlacklist(ctx context.Context, token string) error {
 	if RedisClient == nil {
 		return fmt.Errorf("redis客户端未初始化")
 	}
-	key := jwtBlacklistConfig.Prefix + tokenID
+	key := jwtBlacklistConfig.Prefix + token
 	return RedisClient.Set(ctx, key, "1", jwtBlacklistConfig.Expiration).Err()
 }
 
 // IsJWTInBlacklist 检查JWT是否在黑名单中
-func IsJWTInBlacklist(ctx context.Context, tokenID string) (bool, error) {
+func IsJWTInBlacklist(ctx context.Context, token string) (bool, error) {
 	if RedisClient == nil {
 		return false, fmt.Errorf("redis客户端未初始化")
 	}
-	key := jwtBlacklistConfig.Prefix + tokenID
+	key := jwtBlacklistConfig.Prefix + token
 	exists, err := RedisClient.Exists(ctx, key).Result()
 	if err != nil {
 		return false, err

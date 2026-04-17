@@ -113,19 +113,17 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 // @Tags 认证
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Param request body service.LogoutRequest true "登出信息"
 // @Success 200 {object} response.Response
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// 从请求中获取令牌
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		response.Unauthorized(c, "missing authorization header")
+	var req service.LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
 		return
 	}
 
-	// TODO: 外部实现 Redis 将令牌加入黑名单
-	_ = h.authService.Logout(authHeader)
+	_ = h.authService.Logout(&req)
 
 	response.SuccessWithMessage(c, "logged out successfully", nil)
 }
