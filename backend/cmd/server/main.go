@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"novelflow/backend/config"
 	"novelflow/backend/internal"
+	"novelflow/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
