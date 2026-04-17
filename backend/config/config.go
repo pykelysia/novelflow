@@ -20,7 +20,14 @@ func LoadConfig(path string) error {
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("NOVELFLOW")
 
-	// 绑定环境变量，使用 BindEnv 将具体配置路径绑定到环境变量
+	// 绑定环境变量
+	bindEnvVariables()
+
+	return nil
+}
+
+// bindEnvVariables 绑定所有环境变量到配置路径
+func bindEnvVariables() {
 	// Server 配置
 	viper.BindEnv("server.host", "NOVELFLOW_SERVER_HOST")
 	viper.BindEnv("server.port", "NOVELFLOW_SERVER_PORT")
@@ -43,6 +50,4 @@ func LoadConfig(path string) error {
 	viper.BindEnv("jwt.refresh_secret", "NOVELFLOW_JWT_REFRESH_SECRET")
 	viper.BindEnv("jwt.access_expire", "NOVELFLOW_JWT_ACCESS_EXPIRE")
 	viper.BindEnv("jwt.refresh_expire", "NOVELFLOW_JWT_REFRESH_EXPIRE")
-
-	return nil
 }
