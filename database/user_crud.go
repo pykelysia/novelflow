@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -25,46 +26,18 @@ var (
 // DB 全局数据库连接
 var DB *gorm.DB
 
-// UserRepository 用户仓库接口
-type UserRepository interface {
-	// Create 创建用户
-	Create(user *User) error
-	// FindByID 根据ID获取用户
-	FindByID(id uint) (*User, error)
-	// FindByUsername 根据用户名获取用户
-	FindByUsername(username string) (*User, error)
-	// FindByEmail 根据邮箱获取用户
-	FindByEmail(email string) (*User, error)
-	// FindAll 获取所有用户
-	FindAll() ([]*User, error)
-	// FindByFilter 根据过滤器获取用户列表
-	FindByFilter(filter *UserFilter) ([]*User, int64, error)
-	// ExistsByUsername 检查用户名是否存在
-	ExistsByUsername(username string) (bool, error)
-	// ExistsByEmail 检查邮箱是否存在
-	ExistsByEmail(email string) (bool, error)
-	// Update 更新用户
-	Update(user *User) error
-	// Delete 删除用户
-	Delete(id uint) error
-	// HashPassword 密码加密
-	HashPassword(user *User, password string) error
-	// VerifyPassword 密码验证
-	VerifyPassword(user *User, password string) bool
-}
-
 // userRepository GORM用户仓库实现
-type userRepository struct {
+type UserRepository struct {
 	db *gorm.DB
 }
 
 // NewUserRepository 创建用户仓库实例
-func NewUserRepository(db *gorm.DB) UserRepository {
-	return &userRepository{db: db}
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
 // Create 创建用户
-func (r *userRepository) Create(user *User) error {
+func (r *UserRepository) Create(user *User) error {
 	// 检查用户名是否已存在
 	exists, err := r.ExistsByUsername(user.Username)
 	if err != nil {
@@ -89,7 +62,7 @@ func (r *userRepository) Create(user *User) error {
 }
 
 // FindByID 根据ID获取用户
-func (r *userRepository) FindByID(id uint) (*User, error) {
+func (r *UserRepository) FindByID(id uint) (*User, error) {
 	var user User
 	err := r.db.First(&user, id).Error
 	if err != nil {
@@ -102,7 +75,7 @@ func (r *userRepository) FindByID(id uint) (*User, error) {
 }
 
 // FindByUsername 根据用户名获取用户
-func (r *userRepository) FindByUsername(username string) (*User, error) {
+func (r *UserRepository) FindByUsername(username string) (*User, error) {
 	var user User
 	err := r.db.Where("username = ?", username).First(&user).Error
 	if err != nil {
@@ -115,7 +88,7 @@ func (r *userRepository) FindByUsername(username string) (*User, error) {
 }
 
 // FindByEmail 根据邮箱获取用户
-func (r *userRepository) FindByEmail(email string) (*User, error) {
+func (r *UserRepository) FindByEmail(email string) (*User, error) {
 	var user User
 	err := r.db.Where("email = ?", email).First(&user).Error
 	if err != nil {
@@ -128,7 +101,7 @@ func (r *userRepository) FindByEmail(email string) (*User, error) {
 }
 
 // FindAll 获取所有用户
-func (r *userRepository) FindAll() ([]*User, error) {
+func (r *UserRepository) FindAll() ([]*User, error) {
 	var users []*User
 	err := r.db.Order("created_at DESC").Find(&users).Error
 	if err != nil {
@@ -138,7 +111,7 @@ func (r *userRepository) FindAll() ([]*User, error) {
 }
 
 // FindByFilter 根据过滤器获取用户列表
-func (r *userRepository) FindByFilter(filter *UserFilter) ([]*User, int64, error) {
+func (r *UserRepository) FindByFilter(filter *UserFilter) ([]*User, int64, error) {
 	var users []*User
 	var total int64
 
@@ -181,7 +154,7 @@ func (r *userRepository) FindByFilter(filter *UserFilter) ([]*User, int64, error
 }
 
 // ExistsByUsername 检查用户名是否存在
-func (r *userRepository) ExistsByUsername(username string) (bool, error) {
+func (r *UserRepository) ExistsByUsername(username string) (bool, error) {
 	var count int64
 	err := r.db.Model(&User{}).Where("username = ?", username).Count(&count).Error
 	if err != nil {
@@ -191,7 +164,7 @@ func (r *userRepository) ExistsByUsername(username string) (bool, error) {
 }
 
 // ExistsByEmail 检查邮箱是否存在
-func (r *userRepository) ExistsByEmail(email string) (bool, error) {
+func (r *UserRepository) ExistsByEmail(email string) (bool, error) {
 	var count int64
 	err := r.db.Model(&User{}).Where("email = ?", email).Count(&count).Error
 	if err != nil {
@@ -201,7 +174,7 @@ func (r *userRepository) ExistsByEmail(email string) (bool, error) {
 }
 
 // Update 更新用户
-func (r *userRepository) Update(user *User) error {
+func (r *UserRepository) Update(user *User) error {
 	result := r.db.Save(user)
 	if result.Error != nil {
 		return ErrUpdateFailed
@@ -213,7 +186,7 @@ func (r *userRepository) Update(user *User) error {
 }
 
 // Delete 删除用户
-func (r *userRepository) Delete(id uint) error {
+func (r *UserRepository) Delete(id uint) error {
 	result := r.db.Delete(&User{}, id)
 	if result.Error != nil {
 		return ErrDeleteFailed
@@ -225,7 +198,7 @@ func (r *userRepository) Delete(id uint) error {
 }
 
 // HashPassword 密码加密
-func (r *userRepository) HashPassword(user *User, password string) error {
+func (r *UserRepository) HashPassword(user *User, password string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -235,15 +208,20 @@ func (r *userRepository) HashPassword(user *User, password string) error {
 }
 
 // VerifyPassword 密码验证
-func (r *userRepository) VerifyPassword(user *User, password string) bool {
+func (r *UserRepository) VerifyPassword(user *User, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	return err == nil
 }
 
 // InitDB 初始化数据库连接
-func InitDB(host string, port int, username, password, dbname string) error {
+func InitDB() error {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		username, password, host, port, dbname)
+		viper.GetString("database.username"),
+		viper.GetString("database.password"),
+		viper.GetString("database.host"),
+		viper.GetInt("database.port"),
+		viper.GetString("database.dbname"),
+	)
 
 	var err error
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})

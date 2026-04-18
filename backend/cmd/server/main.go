@@ -7,6 +7,7 @@ import (
 	"novelflow/backend/internal"
 	"novelflow/cache"
 	"novelflow/config"
+	"novelflow/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -22,6 +23,11 @@ func main() {
 	err := cache.InitRedis()
 	if err != nil {
 		log.Fatalf("Failed to init redis: %v", err)
+	}
+
+	err = database.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to init database: %v", err)
 	}
 
 	// 创建 Gin 路由器
