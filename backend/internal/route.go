@@ -9,9 +9,7 @@ import (
 )
 
 // SetupRoutes 配置所有路由
-func SetupRoutes(router *gin.Engine) {
-
-	svc := servicecontext.NewServiceContext()
+func SetupRoutes(svc *servicecontext.ServiceContext, router *gin.Engine) {
 
 	// 初始化处理器
 	authHandler := handler.NewAuthHandler(svc)
@@ -30,14 +28,14 @@ func SetupRoutes(router *gin.Engine) {
 
 	// 认证路由（需要登录）
 	authGroup = router.Group("/auth")
-	authGroup.Use(middleware.AuthMiddleware(svc.JwtUtil))
+	authGroup.Use(middleware.AuthMiddleware(svc))
 	{
 		authGroup.POST("/logout", authHandler.Logout)
 	}
 
 	// 用户路由（需要登录）
 	userGroup := router.Group("/users")
-	userGroup.Use(middleware.AuthMiddleware(svc.JwtUtil))
+	userGroup.Use(middleware.AuthMiddleware(svc))
 	{
 		userGroup.GET("/:id", userHandler.GetUser)
 		userGroup.PUT("/:id", userHandler.UpdateUser)

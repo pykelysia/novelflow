@@ -2,6 +2,7 @@ package servicecontext
 
 import (
 	"novelflow/backend/pkg/jwt"
+	"novelflow/cache"
 	"novelflow/database"
 	"time"
 
@@ -9,8 +10,9 @@ import (
 )
 
 type ServiceContext struct {
-	JwtUtil   *jwt.JWT
-	UserModel *database.UserRepository
+	JwtUtil     *jwt.JWT
+	UserModel   *database.UserRepository
+	RedisClient *cache.Client
 }
 
 func NewServiceContext() *ServiceContext {

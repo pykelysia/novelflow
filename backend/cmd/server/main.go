@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"novelflow/backend/internal"
+	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
 	"novelflow/config"
 	"novelflow/database"
@@ -19,22 +20,24 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 初始化 Redis
-	err := cache.InitRedis()
-	if err != nil {
-		log.Fatalf("Failed to init redis: %v", err)
-	}
-
-	err = database.InitDB()
+	err := database.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
+	// 初始化 Redis
+	redisClient, err := cache.InitRedis()
+	if err != nil {
+		log.Fatalf("Failed to init redis: %v", err)
+	}
+	defer redisClient.Close()
 
+	svc := servicecontext.NewServiceContext()
+	svc.RedisClient = redisClient
 	// 创建 Gin 路由器
 	router := gin.Default()
 
 	// 配置路由
-	internal.SetupRoutes(router)
+	internal.SetupRoutes(svc, router)
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {

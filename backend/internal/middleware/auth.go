@@ -5,14 +5,14 @@ import (
 	"strings"
 
 	"novelflow/backend/internal/response"
+	"novelflow/backend/internal/servicecontext"
 	"novelflow/backend/pkg/jwt"
-	"novelflow/cache"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AuthMiddleware 认证中间件
-func AuthMiddleware(jwtUtil *jwt.JWT) gin.HandlerFunc {
+func AuthMiddleware(svc *servicecontext.ServiceContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -32,7 +32,7 @@ func AuthMiddleware(jwtUtil *jwt.JWT) gin.HandlerFunc {
 		tokenString := parts[1]
 
 		// 验证令牌
-		claims, err := jwtUtil.ValidateAccessToken(tokenString)
+		claims, err := svc.JwtUtil.ValidateAccessToken(tokenString)
 		if err != nil {
 			if err == jwt.ErrExpiredToken {
 				response.Unauthorized(c, "token has expired")
@@ -45,7 +45,7 @@ func AuthMiddleware(jwtUtil *jwt.JWT) gin.HandlerFunc {
 
 		// 验证是否在黑名单中
 		if claims.ID != "" {
-			inBlacklist, err := cache.IsJWTInBlacklist(context.Background(), claims.ID)
+			inBlacklist, err := svc.RedisClient.IsJWTInBlacklist(context.Background(), claims.ID)
 			if err != nil {
 				response.InternalServerError(c, "failed to check token blacklist")
 				c.Abort()

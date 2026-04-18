@@ -9,7 +9,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-var RedisClient *redis.Client
+type Client struct {
+	*redis.Client
+}
 
 const JWTBlacklistPrefix = "jwt:blacklist:"
 
@@ -35,7 +37,8 @@ type RedisConfig struct {
 }
 
 // InitRedis 初始化Redis连接
-func InitRedis() error {
+func InitRedis() (*Client, error) {
+	var redisClient *redis.Client
 	addr := fmt.Sprintf("%s:%d", viper.GetString("redis.host"), viper.GetInt("redis.port"))
 
 	client := redis.NewClient(&redis.Options{
@@ -55,37 +58,38 @@ func InitRedis() error {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("redis连接失败: %w", err)
+		return nil, fmt.Errorf("redis连接失败: %w", err)
 	}
 
-	RedisClient = client
-	return nil
+	return &Client{
+		redisClient,
+	}, nil
 }
 
 // Close 关闭Redis连接
-func Close() error {
-	if RedisClient != nil {
-		return RedisClient.Close()
+func (r *Client) Close() error {
+	if r.Client != nil {
+		return r.Close()
 	}
 	return nil
 }
 
 // AddJWTToBlacklist 将JWT添加到黑名单
-func AddJWTToBlacklist(ctx context.Context, token string) error {
-	if RedisClient == nil {
+func (r *Client) AddJWTToBlacklist(ctx context.Context, token string) error {
+	if r.Client == nil {
 		return fmt.Errorf("redis客户端未初始化")
 	}
 	key := jwtBlacklistConfig.Prefix + token
-	return RedisClient.Set(ctx, key, "1", jwtBlacklistConfig.Expiration).Err()
+	return r.Client.Set(ctx, key, "1", jwtBlacklistConfig.Expiration).Err()
 }
 
 // IsJWTInBlacklist 检查JWT是否在黑名单中
-func IsJWTInBlacklist(ctx context.Context, token string) (bool, error) {
-	if RedisClient == nil {
+func (r *Client) IsJWTInBlacklist(ctx context.Context, token string) (bool, error) {
+	if r.Client == nil {
 		return false, fmt.Errorf("redis客户端未初始化")
 	}
 	key := jwtBlacklistConfig.Prefix + token
-	exists, err := RedisClient.Exists(ctx, key).Result()
+	exists, err := r.Client.Exists(ctx, key).Result()
 	if err != nil {
 		return false, err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/cache"
 	"novelflow/database"
 )
 
@@ -160,8 +159,8 @@ func (l *AuthService) RefreshToken(svc *servicecontext.ServiceContext, req *Refr
 func (l *AuthService) Logout(svc *servicecontext.ServiceContext, req *LogoutRequest) error {
 	ctx := context.Background()
 
-	_ = cache.AddJWTToBlacklist(ctx, req.AccessToken)
-	_ = cache.AddJWTToBlacklist(ctx, req.RefreshToken)
+	_ = svc.RedisClient.AddJWTToBlacklist(ctx, req.AccessToken)
+	_ = svc.RedisClient.AddJWTToBlacklist(ctx, req.RefreshToken)
 
 	return nil
 }
