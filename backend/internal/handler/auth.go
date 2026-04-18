@@ -5,19 +5,22 @@ import (
 
 	"novelflow/backend/internal/response"
 	"novelflow/backend/internal/service"
+	"novelflow/backend/internal/servicecontext"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler 认证处理器
 type AuthHandler struct {
+	svc         *servicecontext.ServiceContext
 	authService *service.AuthService
 }
 
 // NewAuthHandler 创建认证处理器
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(svc *servicecontext.ServiceContext) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
+		svc:         svc,
+		authService: service.NewAuthService(),
 	}
 }
 
@@ -38,7 +41,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(&req)
+	user, err := h.authService.Register(h.svc, &req)
 	if err != nil {
 		if errors.Is(err, service.ErrUserAlreadyExists) {
 			response.BadRequest(c, err.Error())
@@ -68,7 +71,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	tokenResponse, err := h.authService.Login(&req)
+	tokenResponse, err := h.authService.Login(h.svc, &req)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredential) {
 			response.Unauthorized(c, "invalid username or password")
@@ -98,7 +101,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	tokenResponse, err := h.authService.RefreshToken(&req)
+	tokenResponse, err := h.authService.RefreshToken(h.svc, &req)
 	if err != nil {
 		response.Unauthorized(c, "invalid refresh token")
 		return
@@ -123,7 +126,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	_ = h.authService.Logout(&req)
+	_ = h.authService.Logout(h.svc, &req)
 
 	response.SuccessWithMessage(c, "logged out successfully", nil)
 }

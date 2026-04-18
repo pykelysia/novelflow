@@ -4,23 +4,15 @@ import (
 	"context"
 	"errors"
 
-	"novelflow/backend/pkg/jwt"
+	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
 	"novelflow/database"
 )
 
-// AuthService 认证服务
-type AuthService struct {
-	userRepo database.UserRepository
-	jwtUtil  *jwt.JWT
-}
+type AuthService struct{}
 
-// NewAuthService 创建认证服务
-func NewAuthService(userRepo database.UserRepository, jwtUtil *jwt.JWT) *AuthService {
-	return &AuthService{
-		userRepo: userRepo,
-		jwtUtil:  jwtUtil,
-	}
+func NewAuthService() *AuthService {
+	return &AuthService{}
 }
 
 // LoginRequest 登录请求
@@ -55,14 +47,14 @@ type RegisterRequest struct {
 }
 
 // Login 用户登录
-func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
-	user, err := s.userRepo.FindByUsername(req.Username)
+func (l *AuthService) Login(svc *servicecontext.ServiceContext, req *LoginRequest) (*TokenResponse, error) {
+	user, err := svc.UserModel.FindByUsername(req.Username)
 	if err != nil {
 		return nil, ErrInvalidCredential
 	}
 
 	// 验证密码
-	if !s.userRepo.VerifyPassword(user, req.Password) {
+	if !svc.UserModel.VerifyPassword(user, req.Password) {
 		return nil, ErrInvalidCredential
 	}
 
@@ -72,12 +64,12 @@ func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
 	}
 
 	// 生成令牌
-	accessToken, err := s.jwtUtil.GenerateAccessToken(user.ID, user.Username)
+	accessToken, err := svc.JwtUtil.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.jwtUtil.GenerateRefreshToken(user.ID, user.Username)
+	refreshToken, err := svc.JwtUtil.GenerateRefreshToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +81,8 @@ func (s *AuthService) Login(req *LoginRequest) (*TokenResponse, error) {
 }
 
 // Register 用户注册
-func (s *AuthService) Register(req *RegisterRequest) (*database.User, error) {
-	exists, err := s.userRepo.ExistsByUsername(req.Username)
+func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *RegisterRequest) (*database.User, error) {
+	exists, err := svc.UserModel.ExistsByUsername(req.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +92,7 @@ func (s *AuthService) Register(req *RegisterRequest) (*database.User, error) {
 
 	// 检查邮箱是否已存在
 	if req.Email != "" {
-		emailExists, err := s.userRepo.ExistsByEmail(req.Email)
+		emailExists, err := svc.UserModel.ExistsByEmail(req.Email)
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +110,11 @@ func (s *AuthService) Register(req *RegisterRequest) (*database.User, error) {
 	}
 
 	// 密码加密
-	if err := s.userRepo.HashPassword(user, req.Password); err != nil {
+	if err := svc.UserModel.HashPassword(user, req.Password); err != nil {
 		return nil, err
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
+	if err := svc.UserModel.Create(user); err != nil {
 		return nil, err
 	}
 
@@ -130,14 +122,14 @@ func (s *AuthService) Register(req *RegisterRequest) (*database.User, error) {
 }
 
 // RefreshToken 刷新令牌
-func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) {
+func (l *AuthService) RefreshToken(svc *servicecontext.ServiceContext, req *RefreshRequest) (*TokenResponse, error) {
 	// 验证刷新令牌
-	claims, err := s.jwtUtil.ValidateRefreshToken(req.RefreshToken)
+	claims, err := svc.JwtUtil.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := s.userRepo.FindByID(claims.UserID)
+	user, err := svc.UserModel.FindByID(claims.UserID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
@@ -148,12 +140,12 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 	}
 
 	// 生成新令牌
-	accessToken, err := s.jwtUtil.GenerateAccessToken(user.ID, user.Username)
+	accessToken, err := svc.JwtUtil.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.jwtUtil.GenerateRefreshToken(user.ID, user.Username)
+	refreshToken, err := svc.JwtUtil.GenerateRefreshToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +157,7 @@ func (s *AuthService) RefreshToken(req *RefreshRequest) (*TokenResponse, error) 
 }
 
 // Logout 用户登出
-func (s *AuthService) Logout(req *LogoutRequest) error {
+func (l *AuthService) Logout(svc *servicecontext.ServiceContext, req *LogoutRequest) error {
 	ctx := context.Background()
 
 	_ = cache.AddJWTToBlacklist(ctx, req.AccessToken)

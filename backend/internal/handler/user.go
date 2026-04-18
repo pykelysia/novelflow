@@ -6,6 +6,7 @@ import (
 
 	"novelflow/backend/internal/response"
 	"novelflow/backend/internal/service"
+	"novelflow/backend/internal/servicecontext"
 	"novelflow/database"
 
 	"github.com/gin-gonic/gin"
@@ -13,38 +14,16 @@ import (
 
 // UserHandler 用户处理器
 type UserHandler struct {
+	svc         *servicecontext.ServiceContext
 	userService *service.UserService
 }
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(svc *servicecontext.ServiceContext) *UserHandler {
 	return &UserHandler{
-		userService: userService,
+		svc:         svc,
+		userService: service.NewUserService(),
 	}
-}
-
-// GetUsers 获取用户列表
-// @Summary 获取用户列表
-// @Description 获取所有用户列表
-// @Tags 用户
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response{data=[]database.UserResponse}
-// @Router /users [get]
-func (h *UserHandler) GetUsers(c *gin.Context) {
-	users, err := h.userService.GetAllUsers()
-	if err != nil {
-		response.InternalServerError(c, "failed to get users")
-		return
-	}
-
-	var responses []*database.UserResponse
-	for _, user := range users {
-		responses = append(responses, user.ToResponse())
-	}
-
-	response.Success(c, responses)
 }
 
 // GetUser 获取单个用户
@@ -66,7 +45,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUserByID(uint(id))
+	user, err := h.userService.GetUserByID(h.svc, uint(id))
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			response.NotFound(c, "user not found")
@@ -106,7 +85,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.UpdateUser(uint(id), &req)
+	user, err := h.userService.UpdateUser(h.svc, uint(id), &req)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			response.NotFound(c, "user not found")
@@ -138,7 +117,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.DeleteUser(uint(id)); err != nil {
+	if err := h.userService.DeleteUser(h.svc, uint(id)); err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			response.NotFound(c, "user not found")
 			return
