@@ -2,7 +2,7 @@ package service
 
 import (
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/database"
+	sqldb "novelflow/database/mysql"
 )
 
 // UserService 用户服务
@@ -14,7 +14,7 @@ func NewUserService() *UserService {
 }
 
 // GetUserByID 根据 ID 获取用户
-func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (*database.User, error) {
+func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (*sqldb.User, error) {
 	user, err := svc.UserModel.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -23,7 +23,7 @@ func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (
 }
 
 // UpdateUser 更新用户
-func (s *UserService) UpdateUser(svc *servicecontext.ServiceContext, id uint, req *database.UpdateUserRequest) (*database.User, error) {
+func (s *UserService) UpdateUser(svc *servicecontext.ServiceContext, id uint, req *sqldb.UpdateUserRequest) (*sqldb.User, error) {
 	user, err := svc.UserModel.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound

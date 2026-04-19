@@ -7,7 +7,7 @@ import (
 	"novelflow/backend/internal/response"
 	"novelflow/backend/internal/service"
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/database"
+	sqldb "novelflow/database/mysql"
 
 	"github.com/gin-gonic/gin"
 )
@@ -79,7 +79,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var req database.UpdateUserRequest
+	var req sqldb.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
 		return

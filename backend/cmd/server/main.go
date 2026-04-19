@@ -8,7 +8,7 @@ import (
 	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
 	"novelflow/config"
-	"novelflow/database"
+	sqldb "novelflow/database/mysql"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -20,7 +20,7 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	err := database.InitDB()
+	err := sqldb.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}

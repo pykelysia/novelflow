@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/database"
+	sqldb "novelflow/database/mysql"
 )
 
 type AuthService struct{}
@@ -80,7 +80,7 @@ func (l *AuthService) Login(svc *servicecontext.ServiceContext, req *LoginReques
 }
 
 // Register 用户注册
-func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *RegisterRequest) (*database.User, error) {
+func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *RegisterRequest) (*sqldb.User, error) {
 	exists, err := svc.UserModel.ExistsByUsername(req.Username)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *Register
 	}
 
 	// 创建用户
-	user := &database.User{
+	user := &sqldb.User{
 		Username: req.Username,
 		Email:    req.Email,
 		Nickname: req.Nickname,

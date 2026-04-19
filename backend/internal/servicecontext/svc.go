@@ -3,7 +3,7 @@ package servicecontext
 import (
 	"novelflow/backend/pkg/jwt"
 	"novelflow/cache"
-	"novelflow/database"
+	sqldb "novelflow/database/mysql"
 	"time"
 
 	"github.com/spf13/viper"
@@ -11,7 +11,7 @@ import (
 
 type ServiceContext struct {
 	JwtUtil     *jwt.JWT
-	UserModel   *database.UserRepository
+	UserModel   *sqldb.UserRepository
 	RedisClient *cache.Client
 }
 
@@ -25,7 +25,7 @@ func NewServiceContext() *ServiceContext {
 	)
 
 	// 初始化仓储层
-	userRepo := database.NewUserRepository(database.GetDB())
+	userRepo := sqldb.NewUserRepository(sqldb.GetDB())
 
 	return &ServiceContext{
 		JwtUtil:   jwtUtil,
