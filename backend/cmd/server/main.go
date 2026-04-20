@@ -6,9 +6,7 @@ import (
 
 	"novelflow/backend/internal"
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/cache"
 	"novelflow/config"
-	sqldb "novelflow/database/mysql"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -20,19 +18,8 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	err := sqldb.InitDB()
-	if err != nil {
-		log.Fatalf("Failed to init database: %v", err)
-	}
-	// 初始化 Redis
-	redisClient, err := cache.InitRedis()
-	if err != nil {
-		log.Fatalf("Failed to init redis: %v", err)
-	}
-	defer redisClient.Close()
-
 	svc := servicecontext.NewServiceContext()
-	svc.RedisClient = redisClient
+	defer svc.Close()
 	// 创建 Gin 路由器
 	router := gin.Default()
 

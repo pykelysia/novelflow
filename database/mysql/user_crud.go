@@ -2,11 +2,8 @@ package mysql
 
 import (
 	"errors"
-	"fmt"
 
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -22,9 +19,6 @@ var (
 	// ErrDeleteFailed 删除失败
 	ErrDeleteFailed = errors.New("delete failed")
 )
-
-// DB 全局数据库连接
-var DB *gorm.DB
 
 // userRepository GORM用户仓库实现
 type UserRepository struct {
@@ -211,33 +205,4 @@ func (r *UserRepository) HashPassword(user *User, password string) error {
 func (r *UserRepository) VerifyPassword(user *User, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	return err == nil
-}
-
-// InitDB 初始化数据库连接
-func InitDB() error {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		viper.GetString("database.username"),
-		viper.GetString("database.password"),
-		viper.GetString("database.host"),
-		viper.GetInt("database.port"),
-		viper.GetString("database.dbname"),
-	)
-
-	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	// 自动迁移
-	if err := DB.AutoMigrate(&User{}); err != nil {
-		return fmt.Errorf("failed to migrate database: %w", err)
-	}
-
-	return nil
-}
-
-// GetDB 获取数据库连接
-func GetDB() *gorm.DB {
-	return DB
 }
