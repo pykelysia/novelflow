@@ -37,6 +37,9 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 		}
 	}
 
+	// 添加中间件
+	config.Handlers = append(config.Handlers, &safeToolMiddleware{})
+
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
 		return nil, err
