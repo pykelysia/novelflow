@@ -4,24 +4,22 @@ import (
 	"context"
 	"errors"
 	"io"
+	"novelflow/database/mongodb"
 	"strings"
 
-	"github.com/cloudwego/eino-ext/adk/backend/local"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
 )
 
 type AgentRunner struct {
 	*adk.Runner
+	*Session
 }
 
 type AgentRunnerConfig struct {
 	*deep.Config
-}
-
-type Message struct {
-	Type    string
-	Content string
+	*mongodb.MongoClient
+	SID string
 }
 
 type StreamFunc func(Message) bool
@@ -39,18 +37,6 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 		}
 	}
 
-	backend, err := local.NewBackend(ctx, &local.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	if config.Backend == nil {
-		config.Backend = backend
-	}
-	if config.StreamingShell == nil {
-		config.StreamingShell = backend
-	}
-
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
 		return nil, err
@@ -61,8 +47,14 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 		EnableStreaming: true,
 	})
 
+	s, err := NewSession(ctx, config.SID, config.MongoClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &AgentRunner{
-		Runner: r,
+		Runner:  r,
+		Session: s,
 	}, nil
 }
 

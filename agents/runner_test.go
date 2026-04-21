@@ -25,7 +25,7 @@ func TestRunner(t *testing.T) {
 	})
 
 	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
-		&deep.Config{
+		Config: &deep.Config{
 			Name:        "test agent",
 			Description: "test is run able",
 			ChatModel:   cm,
