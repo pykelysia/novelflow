@@ -67,8 +67,9 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 	}, nil
 }
 
-func (ar *AgentRunner) RunA(ctx context.Context, messages []adk.Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
-	resp := ar.Run(ctx, messages, opts...)
+func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
+	ar.Session.Append(message)
+	resp := ar.Run(ctx, ar.Session.Use(), opts...)
 	for {
 		e, flag := resp.Next()
 		if !flag {
@@ -83,6 +84,7 @@ func (ar *AgentRunner) RunA(ctx context.Context, messages []adk.Message, handler
 		}
 
 		sm := e.Output.MessageOutput.MessageStream
+		output := ""
 		if sm != nil {
 			for {
 				m, err := sm.Recv()
@@ -94,22 +96,30 @@ func (ar *AgentRunner) RunA(ctx context.Context, messages []adk.Message, handler
 				}
 				if m.Content != "" {
 					handlerFunc(Message{
-						Type:    "Content",
+						Type:    ContentType,
 						Content: m.Content,
 					})
+					output += m.Content
 				}
 				if m.ReasoningContent != "" {
 					handlerFunc(Message{
-						Type:    "Thinking",
+						Type:    ThinkingType,
 						Content: m.ReasoningContent,
 					})
 				}
 			}
 		}
+		if output != "" {
+			ar.Session.Append(Message{
+				Type:    ContentType,
+				Role:    AgentRole,
+				Content: output,
+			})
+		}
 		tm := e.Output.MessageOutput.ToolName
 		if tm != "" {
 			handlerFunc(Message{
-				Type:    "tool",
+				Type:    ToolType,
 				Content: tm,
 			})
 		}
