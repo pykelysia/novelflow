@@ -58,3 +58,35 @@ func TestRunner(t *testing.T) {
 	}
 	fmt.Println("end")
 }
+
+// 测试调用一个不存在的工具，验证 UnknownToolsHandler 是否生效。
+func TestRunnerWithNoTool(t *testing.T) {
+	ctx := context.Background()
+	config.LoadConfig("../config.yaml")
+	cm := newTestModel(ctx)
+	mdb, err := mongodb.NewMongoDB()
+	if err != nil {
+		t.Error(err)
+	}
+
+	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+		Config: &deep.Config{
+			Name:        "test agent",
+			Description: "test is run able",
+			ChatModel:   cm,
+		},
+		MongoClient: mdb,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = r.RunA(ctx, []adk.Message{schema.UserMessage("这个文件夹下有什么内容")}, func(m Message) bool {
+		fmt.Println(m.Content)
+		return true
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("end")
+}

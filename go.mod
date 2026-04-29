@@ -3,7 +3,7 @@ module novelflow
 go 1.26.1
 
 require (
-	github.com/cloudwego/eino v0.8.9
+	github.com/cloudwego/eino v0.9.0-alpha.18
 	github.com/cloudwego/eino-ext/adk/backend/local v0.2.4
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.17
 	github.com/gin-gonic/gin v1.12.0

@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"novelflow/database/mongodb"
 	"strings"
@@ -35,6 +36,11 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 					strings.Contains(err.Error(), "Too Many Request")
 			},
 		}
+	}
+
+	// 设置 UnknownToolsHandler 处理未定义的工具调用，让模型能够继续运行
+	config.ToolsConfig.UnknownToolsHandler = func(ctx context.Context, name, input string) (string, error) {
+		return fmt.Sprintf("[tool error]: tool %s is not defined. Please use an available tool.", name), nil
 	}
 
 	// 添加中间件

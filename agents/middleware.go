@@ -24,8 +24,8 @@ func (m *safeToolMiddleware) WrapInvokableToolCall(
 			if _, ok := compose.IsInterruptRerunError(err); ok {
 				return "", err
 			}
-			// 将错误转换为字符串，而不是返回错误
-			return fmt.Sprintf("[tool error] %v", err), nil
+			// 将错误转换为字符串返回，让模型能继续运行
+			return fmt.Sprintf("[tool error] %v. Please choose an available tool or respond directly to the user.", err), nil
 		}
 		return result, nil
 	}, nil
