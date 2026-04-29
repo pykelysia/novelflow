@@ -7,7 +7,10 @@ import (
 	"novelflow/database/mongodb"
 	"testing"
 
+	"github.com/cloudwego/eino-ext/adk/backend/local"
 	"github.com/cloudwego/eino-ext/components/model/claude"
+	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/adk/middlewares/skill"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
 	"github.com/spf13/viper"
 )
@@ -123,6 +126,58 @@ func TestRunnerSession(t *testing.T) {
 		Type:    ContentType,
 		Role:    UserRole,
 		Content: "这个文件夹下有什么内容",
+	}, func(m Message) bool {
+		if contentType != m.Type {
+			fmt.Printf("\n%v > ", m.Type)
+			contentType = m.Type
+		}
+
+		fmt.Print(m.Content)
+		return true
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("\nSession %s end\n", r.SessionID)
+}
+
+func TestRunnerSkills(t *testing.T) {
+	ctx := context.Background()
+	config.LoadConfig("../config.yaml")
+	cm := newTestModel(ctx)
+	mdb, err := mongodb.NewMongoDB()
+	if err != nil {
+		t.Error(err)
+	}
+
+	skillsBackend, _ := local.NewBackend(ctx, &local.Config{})
+	skillsMiddlewareBackend, _ := skill.NewBackendFromFilesystem(ctx, &skill.BackendFromFilesystemConfig{
+		Backend: skillsBackend,
+		BaseDir: "../.skills",
+	})
+	skillsMiddleware, _ := skill.NewMiddleware(ctx, &skill.Config{
+		Backend: skillsMiddlewareBackend,
+	})
+
+	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+		Config: &deep.Config{
+			Name:      "test agent",
+			ChatModel: cm,
+			Handlers: []adk.ChatModelAgentMiddleware{
+				skillsMiddleware,
+			},
+		},
+		MongoClient: mdb,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	contentType := ""
+	err = r.RunA(ctx, Message{
+		Type:    ContentType,
+		Role:    UserRole,
+		Content: "告诉我，如何起名一个小说标题",
 	}, func(m Message) bool {
 		if contentType != m.Type {
 			fmt.Printf("\n%v > ", m.Type)
