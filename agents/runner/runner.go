@@ -21,7 +21,8 @@ type AgentRunner struct {
 type AgentRunnerConfig struct {
 	*deep.Config
 	*mongodb.MongoClient
-	SID string
+	SID          string
+	SystemPrompt string
 }
 
 type StreamFunc func(Message) bool
@@ -70,6 +71,11 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 	if err != nil {
 		return nil, err
 	}
+	s.Append(Message{
+		Type:    ContentType,
+		Role:    SystemRole,
+		Content: config.SystemPrompt,
+	})
 
 	return &AgentRunner{
 		Runner:  r,

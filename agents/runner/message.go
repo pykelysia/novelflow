@@ -16,8 +16,9 @@ type Message struct {
 }
 
 const (
-	UserRole  = schema.User
-	AgentRole = schema.Assistant
+	UserRole   = schema.User
+	AgentRole  = schema.Assistant
+	SystemRole = schema.System
 
 	ContentType  = "Content"
 	ThinkingType = "Thinking"
