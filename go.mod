@@ -6,8 +6,10 @@ require (
 	github.com/cloudwego/eino v0.9.0-alpha.18
 	github.com/cloudwego/eino-ext/adk/backend/local v0.2.4
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.17
+	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/spf13/viper v1.21.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0
@@ -44,9 +46,11 @@ require (
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
+	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.17 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
+	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
@@ -63,7 +67,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -74,6 +77,7 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nikolalohinski/gonja v1.5.3 // indirect

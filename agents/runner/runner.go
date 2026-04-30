@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/adk/middlewares/summarization"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
 )
 
@@ -28,6 +29,11 @@ type StreamFunc func(Message) bool
 func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunner, error) {
 	var err error = nil
 
+	config.ChatModel, err = getChatModel(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if config.ModelRetryConfig == nil {
 		config.ModelRetryConfig = &adk.ModelRetryConfig{
 			MaxRetries: 3,
@@ -44,7 +50,11 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 	}
 
 	// 添加中间件
-	config.Handlers = append(config.Handlers, &safeToolMiddleware{})
+	summarizationMW, err := buildSummarization(ctx)
+	if err != nil {
+		return nil, err
+	}
+	config.Handlers = append(config.Handlers, &safeToolMiddleware{}, summarizationMW)
 
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
@@ -125,4 +135,20 @@ func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc St
 		}
 	}
 	return nil
+}
+
+func buildSummarization(ctx context.Context) (adk.ChatModelAgentMiddleware, error) {
+	cm, err := getLiteChatModel(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	summarizationMW, err := summarization.New(ctx, &summarization.Config{
+		Model: cm, // 用于生成摘要的模型
+		Trigger: &summarization.TriggerCondition{
+			ContextTokens: 200000, // 触发摘要的 token 阈值
+		},
+	})
+
+	return summarizationMW, err
 }
