@@ -31,7 +31,7 @@ func newTestModel(ctx context.Context) *claude.ChatModel {
 
 func TestRunner(t *testing.T) {
 	ctx := context.Background()
-	config.LoadConfig("../config.yaml")
+	config.LoadConfig("../../config.yaml")
 	cm := newTestModel(ctx)
 
 	mdb, err := mongodb.NewMongoDB()
@@ -54,7 +54,7 @@ func TestRunner(t *testing.T) {
 	err = r.RunA(ctx, Message{
 		Type:    ContentType,
 		Role:    UserRole,
-		Content: "这个文件夹下有什么内容",
+		Content: "你好",
 	}, func(m Message) bool {
 		fmt.Println(m.Content)
 		return true

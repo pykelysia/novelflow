@@ -14,11 +14,13 @@ func getChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	baseurl := viper.GetString("llm.base_url")
 	modelname := viper.GetString("llm.model_name")
 	apiKey := viper.GetString("llm.api_key")
+	max_tokens := viper.GetInt("llm.max_tokens")
 	if isOpenAI == "openai" {
 		cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-			Model:   modelname,
-			BaseURL: baseurl,
-			APIKey:  apiKey,
+			Model:     modelname,
+			BaseURL:   baseurl,
+			APIKey:    apiKey,
+			MaxTokens: &max_tokens,
 		})
 		if err != nil {
 			return nil, err
@@ -26,9 +28,10 @@ func getChatModel(ctx context.Context) (model.BaseChatModel, error) {
 		return cm, nil
 	} else {
 		cm, err := claude.NewChatModel(ctx, &claude.Config{
-			Model:   modelname,
-			BaseURL: &baseurl,
-			APIKey:  apiKey,
+			Model:     modelname,
+			BaseURL:   &baseurl,
+			APIKey:    apiKey,
+			MaxTokens: max_tokens,
 		})
 		if err != nil {
 			return nil, err
@@ -43,11 +46,13 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	baseurl := viper.GetString("lite_llm.base_url")
 	modelname := viper.GetString("lite_llm.model_name")
 	apiKey := viper.GetString("lite_llm.api_key")
+	max_tokens := viper.GetInt("lite_llm.max_tokens")
 	if isOpenAI == "openai" {
 		cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-			Model:   modelname,
-			BaseURL: baseurl,
-			APIKey:  apiKey,
+			Model:     modelname,
+			BaseURL:   baseurl,
+			APIKey:    apiKey,
+			MaxTokens: &max_tokens,
 		})
 		if err != nil {
 			return nil, err
@@ -55,9 +60,10 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 		return cm, nil
 	} else {
 		cm, err := claude.NewChatModel(ctx, &claude.Config{
-			Model:   modelname,
-			BaseURL: &baseurl,
-			APIKey:  apiKey,
+			Model:     modelname,
+			BaseURL:   &baseurl,
+			APIKey:    apiKey,
+			MaxTokens: max_tokens,
 		})
 		if err != nil {
 			return nil, err
