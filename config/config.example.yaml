@@ -22,7 +22,26 @@ jwt:
   refresh_secret: "your-refresh-secret-key"
   access_expire: 3600        # 1小时
   refresh_expire: 604800     # 7天
+
+jwt:
+  access_secret: "your-access-secret-key"
+  refresh_secret: "your-refresh-secret-key"
+  access_expire: 3600        # 1小时
+  refresh_expire: 604800     # 7天
+
 llm:
-  model_name: "your-model-name"
-  base_url: "your-llm-api-base-url"
-  api_key: "your-llm-api-key"
+  model_type: "anthropic"
+  model_name: ""
+  base_url: ""
+  api_key: ""
+  max_tokens: 300000
+
+lite_llm:
+  model_type: "anthropic"
+  model_name: ""
+  base_url: ""
+  api_key: ""
+  max_tokens: 300000
+
+skills:
+  base_dir: "../.skills"

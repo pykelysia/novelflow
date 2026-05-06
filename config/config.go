@@ -52,8 +52,23 @@ func bindEnvVariables() {
 	viper.BindEnv("jwt.refresh_expire", "NOVELFLOW_JWT_REFRESH_EXPIRE")
 
 	// Model 配置
+	viper.BindEnv("llm.model_type")
 	viper.BindEnv("llm.model_name")
 	viper.BindEnv("llm.base_url")
 	viper.BindEnv("llm.api_key")
+	viper.BindEnv("llm.max_tokens")
+
+	// Lite LLM 配置
+	viper.BindEnv("lite_llm.model_type")
+	viper.BindEnv("lite_llm.model_name")
+	viper.BindEnv("lite_llm.base_url")
+	viper.BindEnv("lite_llm.api_key")
+	viper.BindEnv("lite_llm.max_tokens")
+
+	// Mongo 配置
+	viper.BindEnv("mongo", "NOVELFLOW_MONGO")
+
+	// Skills 配置
+	viper.BindEnv("skills.base_dir")
 
 }
