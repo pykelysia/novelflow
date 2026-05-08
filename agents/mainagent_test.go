@@ -21,7 +21,7 @@ func TestMainAgent(t *testing.T) {
 	err = ma.RunA(ctx, runner.Message{
 		Type:    runner.ContentType,
 		Role:    runner.UserRole,
-		Content: "请帮我写一个短篇小说，题材是科幻，内容要有趣，字数在1000字左右。",
+		Content: "请帮我写一个短篇小说，题材是科幻，内容要有趣，字数在10000字左右。要求适当分章节。",
 	}, func(m runner.Message) bool {
 		if flag != m.Type {
 			fmt.Print("\n<" + m.Type + ">:")
