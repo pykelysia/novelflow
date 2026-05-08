@@ -102,6 +102,7 @@ func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc St
 		sm := e.Output.MessageOutput.MessageStream
 		output := ""
 		if sm != nil {
+			defer sm.Close()
 			for {
 				m, err := sm.Recv()
 				if errors.Is(err, io.EOF) {
