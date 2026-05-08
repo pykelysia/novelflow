@@ -4,11 +4,13 @@ import (
 	"context"
 	"novelflow/agents/runner"
 	"novelflow/database/mongodb"
+	"strings"
 
 	"github.com/cloudwego/eino-ext/adk/backend/local"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/middlewares/skill"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
+	"github.com/cloudwego/eino/compose"
 	"github.com/spf13/viper"
 )
 
@@ -25,10 +27,15 @@ func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error)
 		Config: &deep.Config{
 			Name:        "novelflow agent",
 			Description: "an agent to write novel, you can ask it to generate a short novel.",
+			ToolsConfig: adk.ToolsConfig{
+				ToolsNodeConfig: compose.ToolsNodeConfig{
+					Tools: loadAgentTools(),
+				},
+			},
 		},
 		MongoClient:  mdb,
 		SID:          sessionID,
-		SystemPrompt: mainAgentSystemPrompt,
+		SystemPrompt: strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", sessionID),
 	}
 
 	skillsSystem, err := getSkillsSystem(ctx)
