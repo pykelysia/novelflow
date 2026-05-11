@@ -71,4 +71,7 @@ func bindEnvVariables() {
 	// Skills 配置
 	viper.BindEnv("skills.base_dir")
 
+	// Storage 配置
+	viper.BindEnv("storage.novels_dir", "NOVELFLOW_STORAGE_NOVELS_DIR")
+
 }

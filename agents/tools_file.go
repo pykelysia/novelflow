@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
 	"github.com/cloudwego/eino/schema"
+	"github.com/spf13/viper"
 )
 
 func writeFileTool(sessionID string) tool.BaseTool {
@@ -19,7 +20,7 @@ func writeFileTool(sessionID string) tool.BaseTool {
 }
 
 type writeFileToolInput struct {
-	Titile  string
+	Title   string
 	Content string
 }
 
@@ -30,12 +31,14 @@ func writeFileToolInfo() *schema.ToolInfo {
 		ParamsOneOf: schema.NewParamsOneOfByParams(
 			map[string]*schema.ParameterInfo{
 				"title": {
-					Type: "string",
-					Desc: "the title of chapter, which will be used as file name",
+					Type:     "string",
+					Desc:     "the title of chapter, which will be used as file name",
+					Required: true,
 				},
 				"content": {
-					Type: "string",
-					Desc: "the whole content to write in file",
+					Type:     "string",
+					Desc:     "the whole content to write in file",
+					Required: true,
 				},
 			},
 		),
@@ -44,12 +47,12 @@ func writeFileToolInfo() *schema.ToolInfo {
 
 func writeFileToolInvoke(sessionID string) utils.InvokeFunc[writeFileToolInput, string] {
 	return func(ctx context.Context, input writeFileToolInput) (output string, err error) {
-		dir := filepath.Join(".", "data", "novels", sessionID)
+		dir := filepath.Join(viper.GetString("storage.novels_dir"), sessionID)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create directory: %v", err)
 		}
 
-		path := filepath.Join(dir, input.Titile+".txt")
+		path := filepath.Join(dir, input.Title+".txt")
 		file, err := os.Create(path)
 		if err != nil {
 			return "", err

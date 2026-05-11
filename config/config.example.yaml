@@ -43,5 +43,8 @@ lite_llm:
   api_key: ""
   max_tokens: 300000
 
+storage:
+  novels_dir: "./data/novels"
+
 skills:
-  base_dir: "../.skills"
+  base_dir: "./.skills"
