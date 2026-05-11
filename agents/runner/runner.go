@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/middlewares/summarization"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
+	"github.com/cloudwego/eino/schema"
 )
 
 type AgentRunner struct {
@@ -145,6 +146,24 @@ func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc St
 				Type:    ToolType,
 				Content: tm,
 			})
+
+			saveMsg := Message{
+				Type: ToolResultType,
+				Role: e.Output.MessageOutput.Role,
+			}
+			role := e.Output.MessageOutput.Role
+			if sm := e.Output.MessageOutput.Message; sm != nil {
+				if role == schema.Tool && sm.Content != "" {
+					saveMsg.ToolResult = sm.Content
+				}
+				if len(sm.ToolCalls) > 0 {
+					saveMsg.Content = tm + "\n" + sm.ToolCalls[0].Function.Arguments
+				}
+			}
+			if saveMsg.Content == "" {
+				saveMsg.Content = tm
+			}
+			ar.Session.Append(saveMsg)
 		}
 	}
 	return nil

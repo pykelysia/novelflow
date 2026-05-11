@@ -20,7 +20,8 @@ const (
 	AgentRole  = schema.Assistant
 	SystemRole = schema.System
 
-	ContentType  = "Content"
-	ThinkingType = "Thinking"
-	ToolType     = "Tool"
+	ContentType    = "Content"
+	ThinkingType   = "Thinking"
+	ToolType       = "Tool"
+	ToolResultType = "ToolResult"
 )
