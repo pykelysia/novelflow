@@ -36,7 +36,7 @@ func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error)
 			Description: "an agent to write novel, you can ask it to generate a short novel.",
 			ToolsConfig: adk.ToolsConfig{
 				ToolsNodeConfig: compose.ToolsNodeConfig{
-					Tools: loadAgentTools(),
+					Tools: loadAgentTools(resolvedID),
 				},
 			},
 		},
