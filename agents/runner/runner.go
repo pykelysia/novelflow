@@ -23,6 +23,7 @@ type AgentRunnerConfig struct {
 	*mongodb.MongoClient
 	SID          string
 	SystemPrompt string
+	Session      *Session
 }
 
 type StreamFunc func(Message) bool
@@ -67,9 +68,14 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 		EnableStreaming: true,
 	})
 
-	s, err := NewSession(ctx, config.SID, config.MongoClient)
-	if err != nil {
-		return nil, err
+	var s *Session
+	if config.Session != nil {
+		s = config.Session
+	} else {
+		s, err = NewSession(ctx, config.SID, config.MongoClient)
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.Append(Message{
 		Type:    ContentType,

@@ -44,12 +44,16 @@ func NewSession(ctx context.Context, sid string, mdb *mongodb.MongoClient) (*Ses
 		filter := bson.D{{Key: "_id", Value: sid}}
 		err := s.mongoClient.Database("novelflow").Collection("sessions").FindOne(ctx, filter).Decode(&result)
 		if err == mongo.ErrNoDocuments {
-			return nil, fmt.Errorf("no such session")
-		}
-		if err != nil {
+			sp := createNewSessionPart()
+			s.SessionPart = sp
+			if err := s.Save(); err != nil {
+				return nil, fmt.Errorf("failed to save session: %v", err)
+			}
+		} else if err != nil {
 			return nil, fmt.Errorf("error: %v", err)
+		} else {
+			s.SessionPart = result
 		}
-		s.SessionPart = result
 	}
 	return s, nil
 }

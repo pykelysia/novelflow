@@ -23,6 +23,13 @@ func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error)
 	if err != nil {
 		return nil, err
 	}
+
+	session, err := runner.NewSession(ctx, sessionID, mdb)
+	if err != nil {
+		return nil, err
+	}
+	resolvedID := session.SessionPart.SID
+
 	cfg := &runner.AgentRunnerConfig{
 		Config: &deep.Config{
 			Name:        "novelflow agent",
@@ -34,8 +41,8 @@ func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error)
 			},
 		},
 		MongoClient:  mdb,
-		SID:          sessionID,
-		SystemPrompt: strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", sessionID),
+		Session:      session,
+		SystemPrompt: strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", resolvedID),
 	}
 
 	skillsSystem, err := getSkillsSystem(ctx)
