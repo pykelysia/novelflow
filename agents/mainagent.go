@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"novelflow/database/mongodb"
+	"novelflow/database/mysql"
 	"strings"
 
 	"github.com/cloudwego/eino-ext/adk/backend/local"
@@ -13,17 +14,29 @@ import (
 	"github.com/spf13/viper"
 )
 
-func NewMainAgent(ctx context.Context, sessionID string) (*Agent, error) {
+func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, error) {
 	mdb, err := mongodb.NewMongoDB()
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := NewSession(ctx, sessionID, mdb)
+	session, err := NewSession(ctx, sessionID, userID, mdb)
 	if err != nil {
 		return nil, err
 	}
 	resolvedID := session.SessionPart.SID
+
+	// 将用户-会话关联写入 MySQL（仅当 userID > 0）
+	if userID > 0 {
+		sqlDB, sqlErr := mysql.NewDB()
+		if sqlErr == nil {
+			userSessionRepo := mysql.NewUserSessionRepository(sqlDB)
+			_ = userSessionRepo.Create(&mysql.UserSession{
+				UserID:    userID,
+				SessionID: resolvedID,
+			})
+		}
+	}
 
 	cfg := &Config{
 		Config: &deep.Config{
