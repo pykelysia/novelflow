@@ -59,4 +59,7 @@ func NewServiceContext() *ServiceContext {
 func (svc *ServiceContext) Close() {
 	svc.RedisClient.Close()
 	svc.MongoDB.Close()
+	if sqlDB, err := svc.db.DB(); err == nil {
+		sqlDB.Close()
+	}
 }

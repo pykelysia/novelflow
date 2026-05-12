@@ -35,7 +35,7 @@ func (r *UserSessionRepository) FindBySessionID(sessionID string) (*UserSession,
 	err := r.db.Where("session_id = ?", sessionID).First(&session).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil
+			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
