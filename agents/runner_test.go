@@ -46,6 +46,7 @@ func TestRunner(t *testing.T) {
 			ChatModel:   cm,
 		},
 		MongoClient: mdb,
+		UserID:      0,
 	})
 	if err != nil {
 		t.Error(err)
@@ -82,6 +83,7 @@ func TestRunnerWithNoTool(t *testing.T) {
 			ChatModel:   cm,
 		},
 		MongoClient: mdb,
+		UserID:      0,
 	})
 	if err != nil {
 		t.Error(err)
@@ -116,6 +118,7 @@ func TestRunnerSession(t *testing.T) {
 			ChatModel: cm,
 		},
 		MongoClient: mdb,
+		UserID:      0,
 	})
 	if err != nil {
 		t.Error(err)
@@ -168,6 +171,7 @@ func TestRunnerSkills(t *testing.T) {
 			},
 		},
 		MongoClient: mdb,
+		UserID:      0,
 	})
 	if err != nil {
 		t.Error(err)
