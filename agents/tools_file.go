@@ -1,4 +1,4 @@
-package agents
+package agent
 
 import (
 	"context"
@@ -68,10 +68,10 @@ func writeFileToolInvoke(sessionID string) utils.InvokeFunc[writeFileToolInput, 
 	}
 }
 
-func readFileTool() tool.BaseTool {
+func readFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		readFileToolInfo(),
-		readFileToolInvoke(),
+		readFileToolInvoke(sessionID),
 	)
 }
 
@@ -81,7 +81,7 @@ func readFileToolInfo() *schema.ToolInfo {
 	return &schema.ToolInfo{}
 }
 
-func readFileToolInvoke() utils.InvokeFunc[readFileToolInput, string] {
+func readFileToolInvoke(sessionID string) utils.InvokeFunc[readFileToolInput, string] {
 	return func(ctx context.Context, input readFileToolInput) (output string, err error) {
 		return
 	}

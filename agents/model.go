@@ -1,4 +1,4 @@
-package runner
+package agent
 
 import (
 	"context"
@@ -70,4 +70,8 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 		}
 		return cm, nil
 	}
+}
+
+func GetSubAgentModel(ctx context.Context) (model.BaseChatModel, error) {
+	return getLiteChatModel(ctx)
 }

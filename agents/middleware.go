@@ -1,4 +1,4 @@
-package runner
+package agent
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-type safeToolMiddleware struct {
+type SafeToolMiddleware struct {
 	*adk.BaseChatModelAgentMiddleware
 }
 
-func (m *safeToolMiddleware) WrapInvokableToolCall(
+func (m *SafeToolMiddleware) WrapInvokableToolCall(
 	_ context.Context,
 	endpoint adk.InvokableToolCallEndpoint,
 	_ *adk.ToolContext) (adk.InvokableToolCallEndpoint, error) {
@@ -24,14 +24,13 @@ func (m *safeToolMiddleware) WrapInvokableToolCall(
 			if _, ok := compose.IsInterruptRerunError(err); ok {
 				return "", err
 			}
-			// 将错误转换为字符串返回，让模型能继续运行
 			return fmt.Sprintf("[tool error] %v. Please choose an available tool or respond directly to the user.", err), nil
 		}
 		return result, nil
 	}, nil
 }
 
-func (m *safeToolMiddleware) WrapStreamableToolCall(
+func (m *SafeToolMiddleware) WrapStreamableToolCall(
 	_ context.Context,
 	endpoint adk.StreamableToolCallEndpoint,
 	_ *adk.ToolContext) (adk.StreamableToolCallEndpoint, error) {

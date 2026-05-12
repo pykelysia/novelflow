@@ -1,4 +1,4 @@
-package agents
+package agent
 
 import (
 	"github.com/cloudwego/eino/components/tool"

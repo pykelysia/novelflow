@@ -1,4 +1,4 @@
-package runner
+package agent
 
 import (
 	"context"
@@ -14,12 +14,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-type AgentRunner struct {
+type Agent struct {
 	*adk.Runner
 	*Session
 }
 
-type AgentRunnerConfig struct {
+type Config struct {
 	*deep.Config
 	*mongodb.MongoClient
 	SID          string
@@ -29,7 +29,7 @@ type AgentRunnerConfig struct {
 
 type StreamFunc func(Message) bool
 
-func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunner, error) {
+func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 	var err error = nil
 
 	config.ChatModel, err = getChatModel(ctx)
@@ -57,7 +57,7 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 	if err != nil {
 		return nil, err
 	}
-	config.Handlers = append(config.Handlers, &safeToolMiddleware{}, summarizationMW)
+	config.Handlers = append(config.Handlers, &SafeToolMiddleware{}, summarizationMW)
 
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
@@ -84,15 +84,15 @@ func NewAgentRunner(ctx context.Context, config *AgentRunnerConfig) (*AgentRunne
 		Content: config.SystemPrompt,
 	})
 
-	return &AgentRunner{
+	return &Agent{
 		Runner:  r,
 		Session: s,
 	}, nil
 }
 
-func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
-	ar.Session.Append(message)
-	resp := ar.Run(ctx, ar.Session.Use(), opts...)
+func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
+	a.Session.Append(message)
+	resp := a.Run(ctx, a.Session.Use(), opts...)
 	for {
 		e, flag := resp.Next()
 		if !flag {
@@ -134,7 +134,7 @@ func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc St
 			}
 		}
 		if output != "" {
-			ar.Session.Append(Message{
+			a.Session.Append(Message{
 				Type:    ContentType,
 				Role:    AgentRole,
 				Content: output,
@@ -163,7 +163,7 @@ func (ar *AgentRunner) RunA(ctx context.Context, message Message, handlerFunc St
 			if saveMsg.Content == "" {
 				saveMsg.Content = tm
 			}
-			ar.Session.Append(saveMsg)
+			a.Session.Append(saveMsg)
 		}
 	}
 	return nil
@@ -176,9 +176,9 @@ func buildSummarization(ctx context.Context) (adk.ChatModelAgentMiddleware, erro
 	}
 
 	summarizationMW, err := summarization.New(ctx, &summarization.Config{
-		Model: cm, // 用于生成摘要的模型
+		Model: cm,
 		Trigger: &summarization.TriggerCondition{
-			ContextTokens: 200000, // 触发摘要的 token 阈值
+			ContextTokens: 200000,
 		},
 	})
 

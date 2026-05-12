@@ -1,8 +1,7 @@
-package agents
+package agent
 
 import (
 	"context"
-	"novelflow/agents/runner"
 	"novelflow/database/mongodb"
 	"strings"
 
@@ -14,23 +13,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-type InternalAgent struct {
-	*runner.AgentRunner
-}
-
-func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error) {
+func NewMainAgent(ctx context.Context, sessionID string) (*Agent, error) {
 	mdb, err := mongodb.NewMongoDB()
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := runner.NewSession(ctx, sessionID, mdb)
+	session, err := NewSession(ctx, sessionID, mdb)
 	if err != nil {
 		return nil, err
 	}
 	resolvedID := session.SessionPart.SID
 
-	cfg := &runner.AgentRunnerConfig{
+	cfg := &Config{
 		Config: &deep.Config{
 			Name:        "novelflow agent",
 			Description: "an agent to write novel, you can ask it to generate a short novel.",
@@ -51,14 +46,12 @@ func NewMainAgent(ctx context.Context, sessionID string) (*InternalAgent, error)
 	}
 	cfg.Handlers = append(cfg.Handlers, skillsSystem)
 
-	r, err := runner.NewAgentRunner(ctx, cfg)
+	r, err := NewAgent(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &InternalAgent{
-		AgentRunner: r,
-	}, nil
+	return r, nil
 }
 
 func getSkillsSystem(ctx context.Context) (adk.ChatModelAgentMiddleware, error) {

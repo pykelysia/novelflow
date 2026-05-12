@@ -1,4 +1,4 @@
-package runner
+package agent
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func newTestModel(ctx context.Context) *claude.ChatModel {
 
 func TestRunner(t *testing.T) {
 	ctx := context.Background()
-	config.LoadConfig("../../config.yaml")
+	config.LoadConfig("../config.yaml")
 	cm := newTestModel(ctx)
 
 	mdb, err := mongodb.NewMongoDB()
@@ -39,7 +39,7 @@ func TestRunner(t *testing.T) {
 		t.Error(err)
 	}
 
-	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+	r, err := NewAgent(ctx, &Config{
 		Config: &deep.Config{
 			Name:        "test agent",
 			Description: "test is run able",
@@ -75,7 +75,7 @@ func TestRunnerWithNoTool(t *testing.T) {
 		t.Error(err)
 	}
 
-	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+	r, err := NewAgent(ctx, &Config{
 		Config: &deep.Config{
 			Name:        "test agent",
 			Description: "test is run able",
@@ -110,7 +110,7 @@ func TestRunnerSession(t *testing.T) {
 		t.Error(err)
 	}
 
-	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+	r, err := NewAgent(ctx, &Config{
 		Config: &deep.Config{
 			Name:      "test agent",
 			ChatModel: cm,
@@ -153,13 +153,13 @@ func TestRunnerSkills(t *testing.T) {
 	skillsBackend, _ := local.NewBackend(ctx, &local.Config{})
 	skillsMiddlewareBackend, _ := skill.NewBackendFromFilesystem(ctx, &skill.BackendFromFilesystemConfig{
 		Backend: skillsBackend,
-		BaseDir: "../.skills",
+		BaseDir: ".skills",
 	})
 	skillsMiddleware, _ := skill.NewMiddleware(ctx, &skill.Config{
 		Backend: skillsMiddlewareBackend,
 	})
 
-	r, err := NewAgentRunner(ctx, &AgentRunnerConfig{
+	r, err := NewAgent(ctx, &Config{
 		Config: &deep.Config{
 			Name:      "test agent",
 			ChatModel: cm,
