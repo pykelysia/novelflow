@@ -57,6 +57,11 @@ HTTP → Gin → Handler → Service → Repository (MySQL/Redis)
 - **MongoDB**: Agent chat sessions + messages (collections: `sessions`, `messages`)
 - **Redis**: JWT blacklist (logout revocation)
 
+### Workflow
+
+- **README sync**: When making important changes (new features, structural changes, config changes), update `README.md` to reflect them.
+- **Commit style**: One commit per logical step, clear Chinese commit messages.
+
 ### Key Patterns
 
 - Agent tools must be registered in `agents/tools.go` → `loadAgentTools()`
