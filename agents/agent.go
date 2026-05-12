@@ -25,6 +25,7 @@ type Config struct {
 	SID          string
 	SystemPrompt string
 	Session      *Session
+	UserID       uint
 }
 
 type StreamFunc func(Message) bool
@@ -73,7 +74,7 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 	if config.Session != nil {
 		s = config.Session
 	} else {
-		s, err = NewSession(ctx, config.SID, config.MongoClient)
+		s, err = NewSession(ctx, config.SID, config.UserID, config.MongoClient)
 		if err != nil {
 			return nil, err
 		}

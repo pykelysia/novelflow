@@ -16,6 +16,7 @@ import (
 
 type SessionPart struct {
 	SID       string    `bson:"_id"`
+	UserID    uint      `bson:"user_id,omitempty"`
 	Title     string    `bson:"title,omitempty"`
 	CreatedAt time.Time `bson:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at"`
@@ -27,13 +28,14 @@ type Session struct {
 	mongoClient *mongodb.MongoClient
 }
 
-func NewSession(ctx context.Context, sid string, mdb *mongodb.MongoClient) (*Session, error) {
+func NewSession(ctx context.Context, sid string, userID uint, mdb *mongodb.MongoClient) (*Session, error) {
 	s := &Session{
 		SessionID:   sid,
 		mongoClient: mdb,
 	}
 	if len(sid) != 36 {
 		sp := createNewSessionPart()
+		sp.UserID = userID
 		s.SessionID = sp.SID
 		s.SessionPart = sp
 		if err := s.Save(); err != nil {
@@ -45,6 +47,7 @@ func NewSession(ctx context.Context, sid string, mdb *mongodb.MongoClient) (*Ses
 		err := s.mongoClient.Database("novelflow").Collection("sessions").FindOne(ctx, filter).Decode(&result)
 		if err == mongo.ErrNoDocuments {
 			sp := createNewSessionPart()
+			sp.UserID = userID
 			s.SessionPart = sp
 			if err := s.Save(); err != nil {
 				return nil, fmt.Errorf("failed to save session: %v", err)
