@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -75,14 +76,42 @@ func readFileTool(sessionID string) tool.BaseTool {
 	)
 }
 
-type readFileToolInput struct{}
+type readFileToolInput struct {
+	Title string `json:"title"`
+}
 
 func readFileToolInfo() *schema.ToolInfo {
-	return &schema.ToolInfo{}
+	return &schema.ToolInfo{
+		Name: "read_novel_chapter_file_tool",
+		Desc: "read a novel chapter file by title, return the full content of the file",
+		ParamsOneOf: schema.NewParamsOneOfByParams(
+			map[string]*schema.ParameterInfo{
+				"title": {
+					Type:     "string",
+					Desc:     "the title of the chapter to read, which matches the filename (without .txt extension)",
+					Required: true,
+				},
+			},
+		),
+	}
 }
 
 func readFileToolInvoke(sessionID string) utils.InvokeFunc[readFileToolInput, string] {
 	return func(ctx context.Context, input readFileToolInput) (output string, err error) {
-		return
+		if strings.Contains(input.Title, "..") {
+			return "", fmt.Errorf("invalid title: '..' is not allowed")
+		}
+
+		path := filepath.Join(viper.GetString("storage.novels_dir"), sessionID, input.Title+".txt")
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "", fmt.Errorf("chapter file not found: %s", input.Title+".txt")
+			}
+			return "", fmt.Errorf("failed to read chapter file %s: %v", input.Title+".txt", err)
+		}
+
+		return string(data), nil
 	}
 }
