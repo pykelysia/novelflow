@@ -13,11 +13,12 @@ import (
 )
 
 type ServiceContext struct {
-	JwtUtil     *jwt.JWT
-	db          *gorm.DB
-	UserModel   *sqldb.UserRepository
-	RedisClient *cache.Client
-	MongoDB     *mongodb.MongoClient
+	JwtUtil          *jwt.JWT
+	db               *gorm.DB
+	UserModel        *sqldb.UserRepository
+	UserSessionModel *sqldb.UserSessionRepository
+	RedisClient      *cache.Client
+	MongoDB          *mongodb.MongoClient
 }
 
 func NewServiceContext() *ServiceContext {
@@ -37,6 +38,7 @@ func NewServiceContext() *ServiceContext {
 	}
 	svc.db = db
 	svc.UserModel = sqldb.NewUserRepository(db)
+	svc.UserSessionModel = sqldb.NewUserSessionRepository(db)
 
 	// 初始化 Redis
 	redisClient, err := cache.InitRedis()
