@@ -19,7 +19,6 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 	if err != nil {
 		return nil, err
 	}
-	// TODO: 在 Agent 生命周期结束时关闭 mdb 连接
 
 	session, err := NewSession(ctx, sessionID, userID, mdb)
 	if err != nil {
@@ -30,9 +29,9 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 	// 将用户-会话关联写入 MySQL（仅当 userID > 0）
 	if userID > 0 {
 		sqlDB, sqlErr := mysql.NewDB()
-		// TODO: 在 Agent 生命周期结束时关闭 sqlDB 连接
 		if sqlErr == nil {
 			userSessionRepo := mysql.NewUserSessionRepository(sqlDB)
+			// TODO: 添加日志记录，便于排查 mapping 写入失败原因
 			_ = userSessionRepo.Create(&mysql.UserSession{
 				UserID:    userID,
 				SessionID: resolvedID,
