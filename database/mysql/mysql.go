@@ -25,7 +25,7 @@ func NewDB() (*gorm.DB, error) {
 	}
 
 	// 自动迁移
-	if err := DB.AutoMigrate(&User{}); err != nil {
+	if err := DB.AutoMigrate(&User{}, &UserSession{}); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
