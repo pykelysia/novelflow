@@ -20,10 +20,16 @@
 ```
 novelflow/
 ├── agents/                  # AI Agent 引擎
-│   ├── runner.go           # Agent 运行器（基于 Eino ADK）
+│   ├── agent.go            # Agent 核心（基于 Eino ADK deep 模式）
+│   ├── mainagent.go        # 小说创作主 Agent
 │   ├── middleware.go        # 工具调用安全中间件
 │   ├── session.go          # MongoDB 会话管理
 │   ├── message.go          # 消息模型
+│   ├── model.go            # LLM 模型初始化
+│   ├── prompt.go           # 小说创作系统提示词
+│   ├── tools.go            # 工具注册
+│   ├── tools_file.go       # 文件读写工具
+│   ├── tools_db.go         # 数据库查询工具
 │   └── utils.go            # 流式处理工具
 ├── backend/
 │   ├── cmd/server/main.go  # 服务入口
@@ -37,7 +43,7 @@ novelflow/
 ├── cache/                   # Redis 客户端（JWT 黑名单）
 ├── config/                  # Viper 配置加载（支持环境变量覆盖）
 ├── database/
-│   ├── mysql/              # 用户模型与 GORM 仓库
+│   ├── mysql/              # 用户模型、会话关联、GORM 仓库（单例连接）
 │   └── mongodb/            # MongoDB 连接（Agent 会话存储）
 ├── frontend/               # 前端（待开发）
 └── cmd/                    # 其他命令入口（待开发）
@@ -59,6 +65,7 @@ novelflow/
 - 未知工具处理器（模型可自动修正）
 - MongoDB 持久化会话管理
 - 自动重试（限流 429 重试）
+- 会话与用户关联（MongoDB session + MySQL `user_sessions` 映射）
 
 ### API 路由
 
