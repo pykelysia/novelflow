@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"novelflow/database/mongodb"
 	"novelflow/database/mysql"
 	"strings"
@@ -53,6 +54,13 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 		Session:      session,
 		SystemPrompt: strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", resolvedID),
 	}
+
+	// 创建质量审查 sub-agent
+	reviewAgent, err := CreateReviewAgent(ctx, resolvedID, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create review sub-agent: %v", err)
+	}
+	cfg.Config.SubAgents = []adk.Agent{reviewAgent}
 
 	skillsSystem, err := getSkillsSystem(ctx)
 	if err != nil {
