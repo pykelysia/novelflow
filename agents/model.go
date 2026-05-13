@@ -15,29 +15,8 @@ func getChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	modelname := viper.GetString("llm.model_name")
 	apiKey := viper.GetString("llm.api_key")
 	max_tokens := viper.GetInt("llm.max_tokens")
-	if isOpenAI == "openai" {
-		cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-			Model:     modelname,
-			BaseURL:   baseurl,
-			APIKey:    apiKey,
-			MaxTokens: &max_tokens,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return cm, nil
-	} else {
-		cm, err := claude.NewChatModel(ctx, &claude.Config{
-			Model:     modelname,
-			BaseURL:   &baseurl,
-			APIKey:    apiKey,
-			MaxTokens: max_tokens,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return cm, nil
-	}
+
+	return getModel(ctx, isOpenAI, baseurl, modelname, apiKey, max_tokens)
 }
 
 func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
@@ -47,11 +26,17 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	modelname := viper.GetString("lite_llm.model_name")
 	apiKey := viper.GetString("lite_llm.api_key")
 	max_tokens := viper.GetInt("lite_llm.max_tokens")
-	if isOpenAI == "openai" {
+
+	return getModel(ctx, isOpenAI, baseurl, modelname, apiKey, max_tokens)
+}
+
+func getModel(ctx context.Context, flag, baseurl, modelname, apikey string, max_tokens int) (model.BaseChatModel, error) {
+
+	if flag == "openai" {
 		cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
 			Model:     modelname,
 			BaseURL:   baseurl,
-			APIKey:    apiKey,
+			APIKey:    apikey,
 			MaxTokens: &max_tokens,
 		})
 		if err != nil {
@@ -62,7 +47,7 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 		cm, err := claude.NewChatModel(ctx, &claude.Config{
 			Model:     modelname,
 			BaseURL:   &baseurl,
-			APIKey:    apiKey,
+			APIKey:    apikey,
 			MaxTokens: max_tokens,
 		})
 		if err != nil {
@@ -70,8 +55,4 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 		}
 		return cm, nil
 	}
-}
-
-func GetSubAgentModel(ctx context.Context) (model.BaseChatModel, error) {
-	return getLiteChatModel(ctx)
 }
