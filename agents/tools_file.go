@@ -85,6 +85,9 @@ func listChapterFilesToolInfo() *schema.ToolInfo {
 
 func listChapterFilesToolInvoke(sessionID string) utils.InvokeFunc[struct{}, string] {
 	return func(ctx context.Context, _ struct{}) (output string, err error) {
+		if sessionID == "" {
+			return "", fmt.Errorf("sessionID is required")
+		}
 		dir := filepath.Join(viper.GetString("storage.novels_dir"), sessionID)
 		entries, err := os.ReadDir(dir)
 		if err != nil {
