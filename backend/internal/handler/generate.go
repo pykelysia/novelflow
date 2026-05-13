@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"net/http"
 
 	"novelflow/backend/internal/response"
 	"novelflow/backend/internal/service"
@@ -43,11 +42,7 @@ func (h *GenerateHandler) StartGeneration(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Response{
-		Code:    http.StatusOK,
-		Message: "generation task created",
-		Data:    resp,
-	})
+	response.SuccessWithMessage(c, "generation task created", resp)
 }
 
 func (h *GenerateHandler) GetGenerationStatus(c *gin.Context) {

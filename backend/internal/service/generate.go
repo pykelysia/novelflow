@@ -7,6 +7,7 @@ import (
 
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
+	"novelflow/database/mongodb"
 	"novelflow/database/task"
 
 	"github.com/google/uuid"
@@ -44,12 +45,17 @@ type GenerateStatusResponse struct {
 func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, userID uint, req *GenerateRequest) (*GenerateResponse, error) {
 	sessionID := uuid.New().String()
 
+	if req.ChapterCount <= 0 {
+		req.ChapterCount = 1
+	}
+
 	_, err := task.CreateTask(context.Background(), svc.MongoDB, sessionID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("create task failed: %w", err)
 	}
 
-	go runGeneration(svc, sessionID, userID, req)
+	ctx, cancel := context.WithCancel(context.Background())
+	go runGeneration(ctx, cancel, svc.MongoDB, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -78,17 +84,17 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 	}, nil
 }
 
-func runGeneration(svc *servicecontext.ServiceContext, sessionID string, userID uint, req *GenerateRequest) {
+func runGeneration(ctx context.Context, cancel context.CancelFunc, mdb *mongodb.MongoClient, sessionID string, userID uint, req *GenerateRequest) {
+	defer cancel()
 	prompt := composePrompt(req)
-	ctx := context.Background()
 
-	if err := task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskRunning, ""); err != nil {
+	if err := task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskRunning, ""); err != nil {
 		return
 	}
 
 	a, err := agent.NewMainAgent(ctx, sessionID, userID)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
 		return
 	}
 
@@ -100,11 +106,11 @@ func runGeneration(svc *servicecontext.ServiceContext, sessionID string, userID 
 		return true
 	})
 	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
 		return
 	}
 
-	task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskCompleted, "")
+	task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskCompleted, "")
 }
 
 func composePrompt(req *GenerateRequest) string {

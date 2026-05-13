@@ -79,6 +79,7 @@ func GetTask(ctx context.Context, mdb *mongodb.MongoClient, sessionID string) (*
 	return &t, nil
 }
 
+// ListUserTasks 列出用户的所有任务（后续扩展用）
 func ListUserTasks(ctx context.Context, mdb *mongodb.MongoClient, userID uint) ([]Task, error) {
 	cursor, err := collection(mdb).Find(
 		ctx,
