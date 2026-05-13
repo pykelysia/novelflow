@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"novelflow/database/mongodb"
+	"strings"
 	"time"
 
 	"github.com/cloudwego/eino/adk"
@@ -23,20 +24,17 @@ type SessionPart struct {
 }
 
 type Session struct {
-	SessionID   string
 	SessionPart SessionPart
 	mongoClient *mongodb.MongoClient
 }
 
 func NewSession(ctx context.Context, sid string, userID uint, mdb *mongodb.MongoClient) (*Session, error) {
 	s := &Session{
-		SessionID:   sid,
 		mongoClient: mdb,
 	}
 	if len(sid) != 36 {
 		sp := createNewSessionPart()
 		sp.UserID = userID
-		s.SessionID = sp.SID
 		s.SessionPart = sp
 		if err := s.Save(); err != nil {
 			return nil, fmt.Errorf("failed to save session: %v", err)
@@ -107,14 +105,53 @@ func (s *Session) Use() (msgs []adk.Message) {
 		return nil
 	}
 
+	toolCallIdx := 0
 	for _, m := range messages {
-		if m.Type != ContentType {
-			continue
+		switch m.Type {
+		case ContentType:
+			msgs = append(msgs, &schema.Message{
+				Role:    m.Role,
+				Content: m.Content,
+			})
+		case ToolResultType:
+			if m.Role == schema.Assistant && m.Content != "" {
+				parts := strings.SplitN(m.Content, "\n", 2)
+				toolName := parts[0]
+				args := ""
+				if len(parts) > 1 {
+					args = parts[1]
+				}
+				toolCallID := fmt.Sprintf("call_%d", toolCallIdx)
+				toolCallIdx++
+				msgs = append(msgs, &schema.Message{
+					Role: schema.Assistant,
+					ToolCalls: []schema.ToolCall{
+						{
+							ID:   toolCallID,
+							Type: "function",
+							Function: schema.FunctionCall{
+								Name:      toolName,
+								Arguments: args,
+							},
+						},
+					},
+				})
+			} else if m.Role == schema.Tool && m.ToolResult != "" {
+				toolCallID := ""
+				if len(msgs) > 0 {
+					lastMsg := msgs[len(msgs)-1]
+					if len(lastMsg.ToolCalls) > 0 {
+						toolCallID = lastMsg.ToolCalls[0].ID
+					}
+				}
+				msgs = append(msgs, &schema.Message{
+					Role:       schema.Tool,
+					Content:    m.ToolResult,
+					ToolCallID: toolCallID,
+					ToolName:   m.Content,
+				})
+			}
 		}
-		msgs = append(msgs, &schema.Message{
-			Role:    m.Role,
-			Content: m.Content,
-		})
 	}
 	return msgs
 }
