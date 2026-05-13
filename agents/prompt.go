@@ -18,6 +18,7 @@ var (
 	8. chapter-ending — 章末：落点、余韵、回钩、追更拉力
 	9. anti-ai-voice — 去AI味：动作替代总结、身份感入对白、具体化写作
 	10. consistency-review — 章节完稿审查：六维一致性检查
+	11. quality-review — 质量审查评分：0-10分制结构化评估，逐项对照技能标准打分
 
 	## 创作流程
 
@@ -79,6 +80,7 @@ var (
 8. chapter-ending — 章末：落点、余韵、回钩、追更拉力
 9. anti-ai-voice — 去AI味：动作替代总结、身份感入对白、具体化写作
 10. consistency-review — 章节完稿审查：六维一致性检查
+11. quality-review — 质量审查评分：0-10分制结构化质量评分
 
 ## 原始小说大纲与创作目的
 
@@ -88,8 +90,9 @@ var (
 
 1. 使用 list_chapter_files_tool 获取所有已生成的章节列表
 2. 使用 read_novel_chapter_file_tool 逐章阅读内容
-3. 调用相关技能模块获取审查标准，逐项检查
-4. 对每个发现的问题进行评分
+3. 优先调用 quality-review 技能模块获取评分标准
+4. 调用相关技能模块逐项检查
+5. 对每个发现的问题进行评分
 
 ## 评分标准
 
