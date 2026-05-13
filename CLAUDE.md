@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Start server**: `go run backend/cmd/server/main.go` (loads `config.yaml`)
 - **Run all tests**: `go test ./...`
-- **Run single test**: `go test ./agents/runner -run TestRunner`
+- **Run single test**: `go test ./agents -run TestRunner`
 - **Test deps**: tests require running MySQL, MongoDB, and Redis instances
 
 ## Architecture
@@ -31,8 +31,8 @@ Standard three-layer: `handler → service → repository`.
 
 ### AI Agent Engine
 
-- **Runner** (`agents/runner/`): Eino ADK deep agent. Streams output via `RunA()` with thinking/content/tool message types. Configurable dual-model (main LLM + lite LLM for summarization). Retries on 429. Wraps tool errors (never crashes).
-- **Main Agent** (`agents/mainagent.go`): novel-writing agent. Loads 10 `.skills/` writing modules as Eino skills. Provides `write_novel_chapter_file_tool`.
+- **Agent Runner** (`agents/agent.go`): Eino ADK deep agent. Streams output via `RunA()` with thinking/content/tool message types. Configurable dual-model (main LLM + lite LLM for summarization). Retries on 429. Wraps tool errors (never crashes).
+- **Main Agent** (`agents/mainagent.go`): novel-writing agent. Loads 12 `.skills/` writing modules as Eino skills with a review sub-agent (novel_review_agent). Provides `write_novel_chapter_file_tool`.
 - **System Prompt** (`agents/prompt.go`): Chinese web novel writing rules — scene structure, 4-element chapter design, post-chapter consistency review.
 - **Skills** (`.skills/`): 10 Eino-skill modules (concept-planning, opening, volume-outline, plot-logic, character-consistency, transition, dialogue, chapter-ending, anti-ai-voice, consistency-review).
 
