@@ -19,7 +19,6 @@ func NewGenerateService() *GenerateService {
 }
 
 type GenerateRequest struct {
-	Title        string `json:"title" binding:"required"`
 	Genre        string `json:"genre" binding:"required"`
 	Concept      string `json:"concept" binding:"required"`
 	Protagonist  string `json:"protagonist,omitempty"`
@@ -115,9 +114,6 @@ func composePrompt(req *GenerateRequest) string {
 	b.WriteString(req.Concept)
 	b.WriteString("\n")
 
-	if req.Title != "" {
-		b.WriteString(fmt.Sprintf("\n书名：%s", req.Title))
-	}
 	if req.Protagonist != "" {
 		b.WriteString(fmt.Sprintf("\n主角设定：%s", req.Protagonist))
 	}
