@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
@@ -18,7 +19,14 @@ func NewGenerateService() *GenerateService {
 }
 
 type GenerateRequest struct {
-	Prompt string `json:"prompt" binding:"required"`
+	Title        string `json:"title" binding:"required"`
+	Genre        string `json:"genre" binding:"required"`
+	Concept      string `json:"concept" binding:"required"`
+	Protagonist  string `json:"protagonist,omitempty"`
+	WorldSetting string `json:"world_setting,omitempty"`
+	ChapterCount int    `json:"chapter_count"`
+	Style        string `json:"style,omitempty"`
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type GenerateResponse struct {
@@ -42,7 +50,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 		return nil, fmt.Errorf("create task failed: %w", err)
 	}
 
-	go runGeneration(svc, sessionID, userID, req.Prompt)
+	go runGeneration(svc, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -71,7 +79,8 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 	}, nil
 }
 
-func runGeneration(svc *servicecontext.ServiceContext, sessionID string, userID uint, prompt string) {
+func runGeneration(svc *servicecontext.ServiceContext, sessionID string, userID uint, req *GenerateRequest) {
+	prompt := composePrompt(req)
 	ctx := context.Background()
 
 	if err := task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskRunning, ""); err != nil {
@@ -97,4 +106,33 @@ func runGeneration(svc *servicecontext.ServiceContext, sessionID string, userID 
 	}
 
 	task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskCompleted, "")
+}
+
+func composePrompt(req *GenerateRequest) string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("请创作一部%s小说。\n\n", req.Genre))
+	b.WriteString(req.Concept)
+	b.WriteString("\n")
+
+	if req.Title != "" {
+		b.WriteString(fmt.Sprintf("\n书名：%s", req.Title))
+	}
+	if req.Protagonist != "" {
+		b.WriteString(fmt.Sprintf("\n主角设定：%s", req.Protagonist))
+	}
+	if req.WorldSetting != "" {
+		b.WriteString(fmt.Sprintf("\n世界观设定：%s", req.WorldSetting))
+	}
+	if req.ChapterCount > 0 {
+		b.WriteString(fmt.Sprintf("\n请生成 %d 章内容。", req.ChapterCount))
+	}
+	if req.Style != "" {
+		b.WriteString(fmt.Sprintf("\n风格要求：%s", req.Style))
+	}
+	if req.Requirements != "" {
+		b.WriteString(fmt.Sprintf("\n其他要求：%s", req.Requirements))
+	}
+
+	return b.String()
 }
