@@ -7,5 +7,6 @@ import (
 func loadAgentTools(sessionID string) (tools []tool.BaseTool) {
 	tools = append(tools, writeFileTool(sessionID))
 	tools = append(tools, readFileTool(sessionID))
+	tools = append(tools, editFileTool(sessionID))
 	return
 }

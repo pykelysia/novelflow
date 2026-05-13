@@ -137,6 +137,75 @@ func readFileToolInfo() *schema.ToolInfo {
 	}
 }
 
+type editFileToolInput struct {
+	Title      string
+	OldContent string
+	NewContent string
+}
+
+func editFileToolInfo() *schema.ToolInfo {
+	return &schema.ToolInfo{
+		Name: "edit_novel_chapter_file_tool",
+		Desc: "edit a novel chapter file by replacing specified old content with new content. Use this to modify or extend existing chapters without rewriting the entire file",
+		ParamsOneOf: schema.NewParamsOneOfByParams(
+			map[string]*schema.ParameterInfo{
+				"title": {
+					Type:     "string",
+					Desc:     "the title of the chapter to edit, which matches the filename (without .txt extension)",
+					Required: true,
+				},
+				"old_content": {
+					Type:     "string",
+					Desc:     "the exact existing text to be replaced",
+					Required: true,
+				},
+				"new_content": {
+					Type:     "string",
+					Desc:     "the new text to replace the old content with",
+					Required: true,
+				},
+			},
+		),
+	}
+}
+
+func editFileToolInvoke(sessionID string) utils.InvokeFunc[editFileToolInput, string] {
+	return func(ctx context.Context, input editFileToolInput) (output string, err error) {
+		if strings.Contains(input.Title, "..") {
+			return "", fmt.Errorf("invalid title: '..' is not allowed")
+		}
+
+		path := filepath.Join(viper.GetString("storage.novels_dir"), sessionID, input.Title+".txt")
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "", fmt.Errorf("chapter file not found: %s", input.Title+".txt")
+			}
+			return "", fmt.Errorf("failed to read chapter file %s: %v", input.Title+".txt", err)
+		}
+
+		content := string(data)
+		if !strings.Contains(content, input.OldContent) {
+			return "", fmt.Errorf("old_content not found in chapter file: %s", input.Title+".txt")
+		}
+
+		newContent := strings.Replace(content, input.OldContent, input.NewContent, 1)
+		if err := os.WriteFile(path, []byte(newContent), 0644); err != nil {
+			return "", fmt.Errorf("failed to write chapter file %s: %v", input.Title+".txt", err)
+		}
+
+		return fmt.Sprintf("[tool result]成功修改 %s", path), nil
+	}
+}
+
+func editFileTool(sessionID string) tool.BaseTool {
+	return utils.NewTool(
+		editFileToolInfo(),
+		editFileToolInvoke(sessionID),
+	)
+}
+
 func readFileToolInvoke(sessionID string) utils.InvokeFunc[readFileToolInput, string] {
 	return func(ctx context.Context, input readFileToolInput) (output string, err error) {
 		if strings.Contains(input.Title, "..") {
