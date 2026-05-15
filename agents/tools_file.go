@@ -80,6 +80,7 @@ func listChapterFilesToolInfo() *schema.ToolInfo {
 	return &schema.ToolInfo{
 		Name: "list_chapter_files_tool",
 		Desc: "list all chapter files in the session directory, returns the list of chapter titles",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{}),
 	}
 }
 
