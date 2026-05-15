@@ -51,7 +51,7 @@ func CreateReviewAgent(ctx context.Context, sessionID string, outline string) (a
 		WithoutGeneralSubAgent: true,
 		WithoutWriteTodos:      true,
 		Handlers: []adk.ChatModelAgentMiddleware{
-			skillsMiddleware,
+			skillsMiddleware, &SafeToolMiddleware{},
 		},
 	})
 }
