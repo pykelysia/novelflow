@@ -55,8 +55,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 		return nil, fmt.Errorf("create task failed: %w", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go runGeneration(ctx, cancel, svc.MongoDB, sessionID, userID, req)
+	go runGeneration(svc.MongoDB, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -85,7 +84,8 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 	}, nil
 }
 
-func runGeneration(ctx context.Context, cancel context.CancelFunc, mdb *mongodb.MongoClient, sessionID string, userID uint, req *GenerateRequest) {
+func runGeneration(mdb *mongodb.MongoClient, sessionID string, userID uint, req *GenerateRequest) {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	prompt, err := composePrompt(req)
 	if err != nil {
