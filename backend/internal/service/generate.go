@@ -87,7 +87,11 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 
 func runGeneration(ctx context.Context, cancel context.CancelFunc, mdb *mongodb.MongoClient, sessionID string, userID uint, req *GenerateRequest) {
 	defer cancel()
-	prompt := composePrompt(req)
+	prompt, err := composePrompt(req)
+	if err != nil {
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		return
+	}
 
 	if err := task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskRunning, ""); err != nil {
 		return
@@ -124,8 +128,10 @@ var promptTmpl = template.Must(template.New("prompt").Parse(`请创作一部{{.G
 风格要求：{{.Style}}{{end}}{{if .Requirements}}
 其他要求：{{.Requirements}}{{end}}`))
 
-func composePrompt(req *GenerateRequest) string {
+func composePrompt(req *GenerateRequest) (string, error) {
 	var buf bytes.Buffer
-	promptTmpl.Execute(&buf, req)
-	return buf.String()
+	if err := promptTmpl.Execute(&buf, req); err != nil {
+		return "", fmt.Errorf("compose prompt: %w", err)
+	}
+	return buf.String(), nil
 }
