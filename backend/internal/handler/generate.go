@@ -42,7 +42,7 @@ func (h *GenerateHandler) StartGeneration(c *gin.Context) {
 		return
 	}
 
-	response.SuccessWithMessage(c, "generation task created", resp)
+	response.Created(c, resp)
 }
 
 func (h *GenerateHandler) GetGenerationStatus(c *gin.Context) {
