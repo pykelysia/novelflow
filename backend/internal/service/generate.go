@@ -1,9 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"strings"
+	"text/template"
 
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
@@ -113,28 +114,18 @@ func runGeneration(ctx context.Context, cancel context.CancelFunc, mdb *mongodb.
 	task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskCompleted, "")
 }
 
+var promptTmpl = template.Must(template.New("prompt").Parse(`请创作一部{{.Genre}}小说。
+
+{{.Concept}}
+{{if .Protagonist}}
+主角设定：{{.Protagonist}}{{end}}{{if .WorldSetting}}
+世界观设定：{{.WorldSetting}}{{end}}{{if gt .ChapterCount 0}}
+请生成 {{.ChapterCount}} 章内容。{{end}}{{if .Style}}
+风格要求：{{.Style}}{{end}}{{if .Requirements}}
+其他要求：{{.Requirements}}{{end}}`))
+
 func composePrompt(req *GenerateRequest) string {
-	var b strings.Builder
-
-	b.WriteString(fmt.Sprintf("请创作一部%s小说。\n\n", req.Genre))
-	b.WriteString(req.Concept)
-	b.WriteString("\n")
-
-	if req.Protagonist != "" {
-		b.WriteString(fmt.Sprintf("\n主角设定：%s", req.Protagonist))
-	}
-	if req.WorldSetting != "" {
-		b.WriteString(fmt.Sprintf("\n世界观设定：%s", req.WorldSetting))
-	}
-	if req.ChapterCount > 0 {
-		b.WriteString(fmt.Sprintf("\n请生成 %d 章内容。", req.ChapterCount))
-	}
-	if req.Style != "" {
-		b.WriteString(fmt.Sprintf("\n风格要求：%s", req.Style))
-	}
-	if req.Requirements != "" {
-		b.WriteString(fmt.Sprintf("\n其他要求：%s", req.Requirements))
-	}
-
-	return b.String()
+	var buf bytes.Buffer
+	promptTmpl.Execute(&buf, req)
+	return buf.String()
 }
