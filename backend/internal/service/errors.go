@@ -10,4 +10,5 @@ var (
 	ErrDeleteFailed      = errors.New("delete failed")
 	ErrTaskNotFound      = errors.New("task not found")
 	ErrTaskForbidden     = errors.New("task does not belong to user")
+	ErrTooManyRequests   = errors.New("too many concurrent generation requests")
 )

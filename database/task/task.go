@@ -79,6 +79,24 @@ func GetTask(ctx context.Context, mdb *mongodb.MongoClient, sessionID string) (*
 	return &t, nil
 }
 
+// MarkRunningTasksAsFailed 将所有 running 状态的任务标记为 failed
+func MarkRunningTasksAsFailed(ctx context.Context, mdb *mongodb.MongoClient, reason string) (int64, error) {
+	now := time.Now()
+	result, err := collection(mdb).UpdateMany(
+		ctx,
+		bson.D{{Key: "status", Value: TaskRunning}},
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "status", Value: TaskFailed},
+			{Key: "error", Value: reason},
+			{Key: "updated_at", Value: now},
+		}}},
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.ModifiedCount, nil
+}
+
 // ListUserTasks 列出用户的所有任务（后续扩展用）
 func ListUserTasks(ctx context.Context, mdb *mongodb.MongoClient, userID uint) ([]Task, error) {
 	cursor, err := collection(mdb).Find(
