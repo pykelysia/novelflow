@@ -38,6 +38,10 @@ func (h *GenerateHandler) StartGeneration(c *gin.Context) {
 
 	resp, err := h.generateService.StartGeneration(h.svc, uid, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrTooManyRequests) {
+			response.TooManyRequests(c, "too many concurrent generations, please try again later")
+			return
+		}
 		response.InternalServerError(c, "start generation failed")
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"text/template"
 
 	agent "novelflow/agents"
@@ -14,10 +15,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type GenerateService struct{}
+const MaxConcurrentGenerations = 5
+
+type GenerateService struct {
+	sem chan struct{}
+}
 
 func NewGenerateService() *GenerateService {
-	return &GenerateService{}
+	return &GenerateService{
+		sem: make(chan struct{}, MaxConcurrentGenerations),
+	}
 }
 
 type GenerateRequest struct {
@@ -50,12 +57,20 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 		req.ChapterCount = 1
 	}
 
+	select {
+	case s.sem <- struct{}{}:
+	default:
+		return nil, ErrTooManyRequests
+	}
+
 	_, err := task.CreateTask(context.Background(), svc.MongoDB, sessionID, userID)
 	if err != nil {
+		<-s.sem
 		return nil, fmt.Errorf("create task failed: %w", err)
 	}
 
-	go runGeneration(svc.MongoDB, sessionID, userID, req)
+	svc.WG.Add(1)
+	go s.runGeneration(svc.MongoDB, svc.Ctx, &svc.WG, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -84,8 +99,10 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 	}, nil
 }
 
-func runGeneration(mdb *mongodb.MongoClient, sessionID string, userID uint, req *GenerateRequest) {
-	ctx, cancel := context.WithCancel(context.Background())
+func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
+	defer wg.Done()
+	defer func() { <-s.sem }()
+	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 	prompt, err := composePrompt(req)
 	if err != nil {
