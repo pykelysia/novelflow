@@ -56,11 +56,18 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 	}
 
 	// 创建质量审查 sub-agent
-	reviewAgent, err := CreateReviewAgent(ctx, resolvedID, "")
+	reviewAgent, err := CreateReviewAgent(ctx, resolvedID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create review sub-agent: %v", err)
 	}
-	cfg.Config.SubAgents = []adk.Agent{reviewAgent}
+
+	// 创建大纲 sub-agent
+	outlineAgent, err := CreateOutlineAgent(ctx, resolvedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create outline sub-agent: %v", err)
+	}
+
+	cfg.Config.SubAgents = []adk.Agent{outlineAgent, reviewAgent}
 
 	skillsSystem, err := getSkillsSystem(ctx)
 	if err != nil {

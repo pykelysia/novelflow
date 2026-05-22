@@ -13,8 +13,8 @@ import (
 
 // CreateReviewAgent creates a review agent that examines generated novel chapters
 // against the writing skills requirements and produces a scored quality report.
-// It has read-only access to chapter files and no write/edit capabilities.
-func CreateReviewAgent(ctx context.Context, sessionID string, outline string) (adk.Agent, error) {
+// It has read-only access to chapter and outline files and no write/edit capabilities.
+func CreateReviewAgent(ctx context.Context, sessionID string) (adk.Agent, error) {
 	cm, err := getChatModel(ctx)
 	if err != nil {
 		return nil, err
@@ -25,24 +25,23 @@ func CreateReviewAgent(ctx context.Context, sessionID string, outline string) (a
 		return nil, err
 	}
 
-	prompt := strings.ReplaceAll(reviewAgentSystemPrompt, "{outline}", outline)
-
 	tools := []tool.BaseTool{
 		listChapterFilesTool(sessionID),
 		readFileTool(sessionID),
+		readOutlineFileTool(sessionID),
 	}
 
 	return deep.New(ctx, &deep.Config{
 		Name:        "novel_review_agent",
 		Description: "审查小说章节内容质量，检查是否满足各项写作技能的专家",
 		ChatModel:   cm,
-		Instruction: prompt,
+		Instruction: reviewAgentSystemPrompt,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: tools,
 				UnknownToolsHandler: func(ctx context.Context, name, input string) (string, error) {
 					if isWriteToolName(name) {
-						return "[tool error]: 审查 agent 不允许执行写/删/改操作。请使用 list_chapter_files_tool 或 read_novel_chapter_file_tool。", nil
+						return "[tool error]: 审查 agent 不允许执行写/删/改操作。请使用 list_chapter_files_tool、read_novel_chapter_file_tool 或 read_outline_file_tool。", nil
 					}
 					return fmt.Sprintf("[tool error]: tool %s is not defined. Please use an available tool.", name), nil
 				},

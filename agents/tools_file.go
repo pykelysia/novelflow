@@ -207,6 +207,81 @@ func editFileTool(sessionID string) tool.BaseTool {
 	)
 }
 
+func writeOutlineFileTool(sessionID string) tool.BaseTool {
+	return utils.NewTool(
+		writeOutlineFileToolInfo(),
+		writeOutlineFileToolInvoke(sessionID),
+	)
+}
+
+type writeOutlineFileToolInput struct {
+	Content string `json:"content"`
+}
+
+func writeOutlineFileToolInfo() *schema.ToolInfo {
+	return &schema.ToolInfo{
+		Name: "write_outline_file_tool",
+		Desc: "write the novel outline to outline.md file. Use this to create or update the novel's outline/章纲.",
+		ParamsOneOf: schema.NewParamsOneOfByParams(
+			map[string]*schema.ParameterInfo{
+				"content": {
+					Type:     "string",
+					Desc:     "the outline content in markdown format",
+					Required: true,
+				},
+			},
+		),
+	}
+}
+
+func writeOutlineFileToolInvoke(sessionID string) utils.InvokeFunc[writeOutlineFileToolInput, string] {
+	return func(ctx context.Context, input writeOutlineFileToolInput) (output string, err error) {
+		dir := filepath.Join(viper.GetString("storage.novels_dir"), sessionID)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return "", fmt.Errorf("failed to create directory: %v", err)
+		}
+
+		path := filepath.Join(dir, "outline.md")
+		if err := os.WriteFile(path, []byte(input.Content), 0644); err != nil {
+			return "", fmt.Errorf("failed to write outline: %v", err)
+		}
+
+		return fmt.Sprintf("[tool result]成功写入大纲文件 %s", path), nil
+	}
+}
+
+func readOutlineFileTool(sessionID string) tool.BaseTool {
+	return utils.NewTool(
+		readOutlineFileToolInfo(),
+		readOutlineFileToolInvoke(sessionID),
+	)
+}
+
+func readOutlineFileToolInfo() *schema.ToolInfo {
+	return &schema.ToolInfo{
+		Name: "read_outline_file_tool",
+		Desc: "read the current outline from outline.md file. Returns the full outline content.",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{}),
+	}
+}
+
+func readOutlineFileToolInvoke(sessionID string) utils.InvokeFunc[struct{}, string] {
+	return func(ctx context.Context, _ struct{}) (output string, err error) {
+		if sessionID == "" {
+			return "", fmt.Errorf("sessionID is required")
+		}
+		path := filepath.Join(viper.GetString("storage.novels_dir"), sessionID, "outline.md")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "当前还没有大纲文件。请先使用 write_outline_file_tool 创建大纲。", nil
+			}
+			return "", fmt.Errorf("failed to read outline: %v", err)
+		}
+		return string(data), nil
+	}
+}
+
 func readFileToolInvoke(sessionID string) utils.InvokeFunc[readFileToolInput, string] {
 	return func(ctx context.Context, input readFileToolInput) (output string, err error) {
 		if strings.Contains(input.Title, "..") {
