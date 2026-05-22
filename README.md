@@ -44,7 +44,8 @@ novelflow/
 ├── config/                  # Viper 配置加载（支持环境变量覆盖）
 ├── database/
 │   ├── mysql/              # 用户模型、会话关联、GORM 仓库（单例连接）
-│   └── mongodb/            # MongoDB 连接（Agent 会话存储）
+│   ├── mongodb/            # MongoDB 连接（Agent 会话存储）
+│   └── task/               # 异步生成任务状态管理
 ├── frontend/               # 前端（待开发）
 └── cmd/                    # 其他命令入口（待开发）
 ```
@@ -56,6 +57,26 @@ novelflow/
 - 注册 / 登录 / 登出 / 令牌刷新
 - JWT Access Token + Refresh Token 双令牌机制
 - Redis 令牌黑名单（登出即时失效）
+
+### 异步小说生成
+
+- `POST /generate` 异步启动生成任务，立即返回 `session_id`
+- 后台 goroutine 调用 AI Agent 引擎执行小说创作
+- 任务状态持久化到 MongoDB（pending → running → completed / failed）
+- `GET /generate/:session_id` 轮询查询生成状态
+- 请求体字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `genre` | string | 是 | 小说类型（修仙、玄幻、都市等）|
+| `concept` | string | 是 | 核心概念/故事简介 |
+| `protagonist` | string | 否 | 主角设定 |
+| `world_setting` | string | 否 | 世界观设定 |
+| `chapter_count` | int | 否 | 预期章节数 |
+| `style` | string | 否 | 风格要求 |
+| `requirements` | string | 否 | 其他特殊要求 |
+
+各字段按模板合成为完整 prompt 后发给 AI Agent 执行。
 
 ### AI Agent
 
@@ -78,6 +99,8 @@ novelflow/
 | GET  | `/users/:id` | 获取用户 | 是 |
 | PUT  | `/users/:id` | 更新用户 | 是 |
 | DELETE | `/users/:id` | 删除用户 | 是 |
+| POST | `/generate` | 异步启动小说生成 | 是 |
+| GET | `/generate/:session_id` | 查询生成任务状态 | 是 |
 | GET | `/health` | 健康检查 | 否 |
 
 ## 快速开始

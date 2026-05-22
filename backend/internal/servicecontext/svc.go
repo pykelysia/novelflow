@@ -1,11 +1,13 @@
 package servicecontext
 
 import (
+	"context"
 	"log"
 	"novelflow/backend/pkg/jwt"
 	"novelflow/cache"
 	"novelflow/database/mongodb"
 	sqldb "novelflow/database/mysql"
+	"sync"
 	"time"
 
 	"github.com/spf13/viper"
@@ -19,6 +21,9 @@ type ServiceContext struct {
 	UserSessionModel *sqldb.UserSessionRepository
 	RedisClient      *cache.Client
 	MongoDB          *mongodb.MongoClient
+	WG               sync.WaitGroup
+	Ctx              context.Context
+	Cancel           context.CancelFunc
 }
 
 func NewServiceContext() *ServiceContext {
@@ -52,6 +57,8 @@ func NewServiceContext() *ServiceContext {
 		log.Fatalf("Failed to init mongodb: %v", err)
 	}
 	svc.MongoDB = mdb
+
+	svc.Ctx, svc.Cancel = context.WithCancel(context.Background())
 
 	return svc
 }

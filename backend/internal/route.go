@@ -41,4 +41,15 @@ func SetupRoutes(svc *servicecontext.ServiceContext, router *gin.Engine) {
 		userGroup.PUT("/:id", userHandler.UpdateUser)
 		userGroup.DELETE("/:id", userHandler.DeleteUser)
 	}
+
+	// 生成路由（需要登录）
+	generateHandler := handler.NewGenerateHandler(svc)
+	generateGroup := router.Group("/generate")
+	generateGroup.Use(middleware.AuthMiddleware(svc))
+	{
+		generateGroup.POST("", generateHandler.StartGeneration)
+		generateGroup.GET("/tasks", generateHandler.ListTasks)
+		generateGroup.GET("/:session_id", generateHandler.GetGenerationStatus)
+		generateGroup.GET("/:session_id/result", generateHandler.GetGenerationResult)
+	}
 }
