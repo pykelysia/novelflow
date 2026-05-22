@@ -67,7 +67,13 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 		return nil, fmt.Errorf("failed to create outline sub-agent: %v", err)
 	}
 
-	cfg.Config.SubAgents = []adk.Agent{outlineAgent, reviewAgent}
+	// 创建写作 sub-agent
+	writeAgent, err := CreateWriteAgent(ctx, resolvedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create write sub-agent: %v", err)
+	}
+
+	cfg.Config.SubAgents = []adk.Agent{outlineAgent, writeAgent, reviewAgent}
 
 	skillsSystem, err := getSkillsSystem(ctx)
 	if err != nil {

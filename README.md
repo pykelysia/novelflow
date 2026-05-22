@@ -22,6 +22,9 @@ novelflow/
 ├── agents/                  # AI Agent 引擎
 │   ├── agent.go            # Agent 核心（基于 Eino ADK deep 模式）
 │   ├── mainagent.go        # 小说创作主 Agent
+│   ├── outline.go          # 大纲子代理（生成/修改章纲）
+│   ├── writer.go           # 写作子代理（按大纲撰写章节）
+│   ├── reviewer.go         # 审查子代理（质量评分）
 │   ├── middleware.go        # 工具调用安全中间件
 │   ├── session.go          # MongoDB 会话管理
 │   ├── message.go          # 消息模型
