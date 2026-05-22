@@ -42,6 +42,10 @@ client.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && error.config?.url !== "/auth/login") {
+      // 开发模式下不尝试 refresh token，避免重定向到登录页
+      if (localStorage.getItem("dev_mode")) {
+        return Promise.reject(error);
+      }
       const tokens = getTokens();
       if (!tokens?.refresh_token) {
         localStorage.removeItem("tokens");

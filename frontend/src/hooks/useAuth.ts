@@ -5,7 +5,9 @@ import * as authApi from "../api/auth";
 const TOKEN_KEY = "tokens";
 const USER_KEY = "current_user";
 
-function getStoredTokens(): TokenResponse | null {
+// ---- 直接从 localStorage 读取（内部使用） ----
+
+function readTokens(): TokenResponse | null {
   try {
     const raw = localStorage.getItem(TOKEN_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -14,7 +16,7 @@ function getStoredTokens(): TokenResponse | null {
   }
 }
 
-function getStoredUserId(): number | null {
+function readUserId(): number | null {
   try {
     const raw = localStorage.getItem(USER_KEY);
     return raw ? (JSON.parse(raw) as number) : null;
@@ -22,6 +24,20 @@ function getStoredUserId(): number | null {
     return null;
   }
 }
+
+// ---- 缓存快照，保证 useSyncExternalStore 的 getSnapshot 返回稳定引用 ----
+
+let cachedTokens: TokenResponse | null = null;
+let cachedUserId: number | null = null;
+
+function syncCache() {
+  cachedTokens = readTokens();
+  cachedUserId = readUserId();
+}
+
+syncCache();
+
+// ---- 订阅机制 ----
 
 let listeners: (() => void)[] = [];
 
@@ -33,12 +49,15 @@ function subscribe(cb: () => void) {
 }
 
 function emit() {
+  syncCache();
   listeners.forEach((l) => l());
 }
 
+// ---- Hook ----
+
 export function useAuth() {
-  const tokens = useSyncExternalStore(subscribe, getStoredTokens);
-  const userId = useSyncExternalStore(subscribe, getStoredUserId);
+  const tokens = useSyncExternalStore(subscribe, () => cachedTokens);
+  const userId = useSyncExternalStore(subscribe, () => cachedUserId);
   const isAuthenticated = tokens !== null;
 
   const saveSession = useCallback(
@@ -54,7 +73,6 @@ export function useAuth() {
     async (username: string, password: string) => {
       const res = await authApi.login({ username, password });
       if (!res.data) throw new Error("login failed");
-      // 登录后先存 tokens，再拿用户信息
       localStorage.setItem(TOKEN_KEY, JSON.stringify(res.data));
       emit();
       return res.data;
@@ -76,8 +94,21 @@ export function useAuth() {
     [],
   );
 
+  const devLogin = useCallback(() => {
+    const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+    const payload = btoa(JSON.stringify({ userID: 1, username: "admin" }));
+    const mockToken = `${header}.${payload}.dev_signature`;
+    localStorage.setItem(
+      TOKEN_KEY,
+      JSON.stringify({ access_token: mockToken, refresh_token: mockToken }),
+    );
+    localStorage.setItem(USER_KEY, JSON.stringify(1));
+    localStorage.setItem("dev_mode", "true");
+    emit();
+  }, []);
+
   const logout = useCallback(async () => {
-    const t = getStoredTokens();
+    const t = readTokens();
     if (t) {
       try {
         await authApi.logout(t.access_token, t.refresh_token);
@@ -87,6 +118,7 @@ export function useAuth() {
     }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem("dev_mode");
     emit();
   }, []);
 
@@ -97,6 +129,7 @@ export function useAuth() {
     login,
     register,
     logout,
+    devLogin,
     saveSession,
     setUserId,
   };

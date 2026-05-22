@@ -15,9 +15,11 @@ const GENRE_OPTIONS = [
 ];
 
 export default function Dashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, tokens } = useAuth();
   const navigate = useNavigate();
   const { tasks, loading, start, fetchTasks } = useGenerate();
+
+  console.log("[Dev] Dashboard render", { isAuthenticated, hasToken: !!tokens, tasks: tasks.length, loading });
 
   const [genre, setGenre] = useState("");
   const [concept, setConcept] = useState("");
@@ -87,6 +89,14 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {import.meta.env.DEV && (
+        <div className="dev-badge" style={{ background: '#e3f2fd', border: '1px solid #1976d2', color: '#1565c0' }}>
+          调试: auth={isAuthenticated ? 'OK' : 'NO'}  tasks={tasks.length}  loading={loading ? 'Y' : 'N'}  dev_mode={!!localStorage.getItem('dev_mode')}
+        </div>
+      )}
+      {import.meta.env.DEV && (
+        <div className="dev-badge">开发模式 · 显示 mock 数据</div>
+      )}
       <div className="card">
         <h3>新建生成任务</h3>
         <form onSubmit={handleSubmit}>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
-  const { login, setUserId } = useAuth();
+  const { login, setUserId, devLogin } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +42,11 @@ export default function Login() {
     }
   };
 
+  const handleDevLogin = () => {
+    devLogin();
+    navigate("/");
+  };
+
   return (
     <div className="form-card">
       <h2>登录</h2>
@@ -72,6 +77,16 @@ export default function Login() {
       <div className="link-row">
         还没有账号？<Link to="/register">注册</Link>
       </div>
+      {import.meta.env.DEV && (
+        <div style={{ marginTop: 24, borderTop: "1px solid #eee", paddingTop: 16 }}>
+          <p style={{ fontSize: 13, color: "#888", marginBottom: 8, textAlign: "center" }}>
+            开发模式
+          </p>
+          <button className="btn btn-secondary" type="button" onClick={handleDevLogin}>
+            Admin 开发者入口
+          </button>
+        </div>
+      )}
     </div>
   );
 }
