@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"text/template"
 
@@ -13,6 +17,7 @@ import (
 	"novelflow/database/task"
 
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 )
 
 const MaxConcurrentGenerations = 5
@@ -48,6 +53,30 @@ type GenerateStatusResponse struct {
 	Error     string `json:"error,omitempty"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
+}
+
+type ChapterResult struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type GenerateResultResponse struct {
+	SessionID string          `json:"session_id"`
+	Status    string          `json:"status"`
+	Chapters  []*ChapterResult `json:"chapters,omitempty"`
+	Error     string          `json:"error,omitempty"`
+}
+
+type TaskItem struct {
+	SessionID string `json:"session_id"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type ListTasksResponse struct {
+	Tasks []*TaskItem `json:"tasks"`
 }
 
 func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, userID uint, req *GenerateRequest) (*GenerateResponse, error) {
@@ -97,6 +126,82 @@ func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext
 		CreatedAt: t.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: t.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
+}
+
+func (s *GenerateService) GetGenerationResult(svc *servicecontext.ServiceContext, userID uint, sessionID string) (*GenerateResultResponse, error) {
+	if strings.Contains(sessionID, "..") {
+		return nil, ErrTaskNotFound
+	}
+
+	t, err := task.GetTask(context.Background(), svc.MongoDB, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, ErrTaskNotFound
+	}
+	if t.UserID != userID {
+		return nil, ErrTaskForbidden
+	}
+
+	resp := &GenerateResultResponse{
+		SessionID: t.SessionID,
+		Status:    string(t.Status),
+		Error:     t.Error,
+	}
+
+	if t.Status != task.TaskCompleted {
+		return resp, nil
+	}
+
+	dir := filepath.Join(viper.GetString("storage.novels_dir"), sessionID)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return resp, nil
+		}
+		return nil, fmt.Errorf("read novels dir: %w", err)
+	}
+
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".txt") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		resp.Chapters = append(resp.Chapters, &ChapterResult{
+			Title:   strings.TrimSuffix(e.Name(), ".txt"),
+			Content: string(data),
+		})
+	}
+
+	sort.Slice(resp.Chapters, func(i, j int) bool {
+		return resp.Chapters[i].Title < resp.Chapters[j].Title
+	})
+
+	return resp, nil
+}
+
+func (s *GenerateService) ListUserTasks(svc *servicecontext.ServiceContext, userID uint) (*ListTasksResponse, error) {
+	tasks, err := task.ListUserTasks(context.Background(), svc.MongoDB, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list tasks: %w", err)
+	}
+
+	items := make([]*TaskItem, 0, len(tasks))
+	for i := range tasks {
+		items = append(items, &TaskItem{
+			SessionID: tasks[i].SessionID,
+			Status:    string(tasks[i].Status),
+			Error:     tasks[i].Error,
+			CreatedAt: tasks[i].CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt: tasks[i].UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+
+	return &ListTasksResponse{Tasks: items}, nil
 }
 
 func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {

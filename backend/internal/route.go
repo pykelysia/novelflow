@@ -48,6 +48,8 @@ func SetupRoutes(svc *servicecontext.ServiceContext, router *gin.Engine) {
 	generateGroup.Use(middleware.AuthMiddleware(svc))
 	{
 		generateGroup.POST("", generateHandler.StartGeneration)
+		generateGroup.GET("/tasks", generateHandler.ListTasks)
 		generateGroup.GET("/:session_id", generateHandler.GetGenerationStatus)
+		generateGroup.GET("/:session_id/result", generateHandler.GetGenerationResult)
 	}
 }
