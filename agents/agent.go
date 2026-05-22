@@ -3,10 +3,8 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"novelflow/database/mongodb"
-	"strings"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/middlewares/summarization"
@@ -40,18 +38,13 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 
 	if config.ModelRetryConfig == nil {
 		config.ModelRetryConfig = &adk.ModelRetryConfig{
-			MaxRetries: 3,
-			IsRetryAble: func(ctx context.Context, err error) bool {
-				return strings.Contains(err.Error(), "429") ||
-					strings.Contains(err.Error(), "Too Many Request")
-			},
+			MaxRetries:  3,
+			IsRetryAble: isRetryAble,
 		}
 	}
 
 	// 设置 UnknownToolsHandler 处理未定义的工具调用，让模型能够继续运行
-	config.ToolsConfig.UnknownToolsHandler = func(ctx context.Context, name, input string) (string, error) {
-		return fmt.Sprintf("[tool error]: tool %s is not defined. Please use an available tool.", name), nil
-	}
+	config.ToolsConfig.UnknownToolsHandler = defaultUnknownToolHandler
 
 	// 添加中间件
 	summarizationMW, err := buildSummarization(ctx)

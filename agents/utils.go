@@ -1,9 +1,11 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -32,4 +34,13 @@ func safeWarpReader(sr *schema.StreamReader[string]) *schema.StreamReader[string
 		}
 	}()
 	return r
+}
+
+func isRetryAble(ctx context.Context, err error) bool {
+	return strings.Contains(err.Error(), "429") ||
+		strings.Contains(err.Error(), "Too Many Request")
+}
+
+func defaultUnknownToolHandler(ctx context.Context, name, input string) (string, error) {
+	return fmt.Sprintf("[tool error]: tool %s is not available. Please choose another tool.", name), nil
 }

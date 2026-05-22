@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
@@ -37,9 +36,7 @@ func CreateOutlineAgent(ctx context.Context, sessionID string) (adk.Agent, error
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: tools,
-				UnknownToolsHandler: func(ctx context.Context, name, input string) (string, error) {
-					return fmt.Sprintf("[tool error]: tool %s is not defined. Please use write_outline_file_tool or read_outline_file_tool.", name), nil
-				},
+				UnknownToolsHandler: defaultUnknownToolHandler,
 			},
 		},
 		WithoutGeneralSubAgent: true,

@@ -2,8 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
@@ -39,12 +37,7 @@ func CreateReviewAgent(ctx context.Context, sessionID string) (adk.Agent, error)
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: tools,
-				UnknownToolsHandler: func(ctx context.Context, name, input string) (string, error) {
-					if isWriteToolName(name) {
-						return "[tool error]: 审查 agent 不允许执行写/删/改操作。请使用 list_chapter_files_tool、read_novel_chapter_file_tool 或 read_outline_file_tool。", nil
-					}
-					return fmt.Sprintf("[tool error]: tool %s is not defined. Please use an available tool.", name), nil
-				},
+				UnknownToolsHandler: defaultUnknownToolHandler,
 			},
 		},
 		WithoutGeneralSubAgent: true,
@@ -55,12 +48,3 @@ func CreateReviewAgent(ctx context.Context, sessionID string) (adk.Agent, error)
 	})
 }
 
-// isWriteToolName checks whether a tool name corresponds to a write/delete/modify operation.
-// The review sub-agent's UnknownToolsHandler uses this to block write-capable tools,
-// ensuring the reviewer only has read-only access.
-func isWriteToolName(name string) bool {
-	return strings.Contains(name, "write") ||
-		strings.Contains(name, "edit") ||
-		strings.Contains(name, "delete") ||
-		strings.Contains(name, "remove")
-}
