@@ -25,6 +25,7 @@ func CreateWriteAgent(ctx context.Context, sessionID string) (adk.Agent, error) 
 
 	tools := []tool.BaseTool{
 		writeFileTool(sessionID),
+		editFileTool(sessionID),
 		readOutlineFileTool(sessionID),
 		listChapterFilesTool(sessionID),
 		readFileTool(sessionID),

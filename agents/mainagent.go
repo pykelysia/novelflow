@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/middlewares/skill"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
+	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/spf13/viper"
 )
@@ -46,7 +47,9 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 			Description: "an agent to write novel, you can ask it to generate a short novel.",
 			ToolsConfig: adk.ToolsConfig{
 				ToolsNodeConfig: compose.ToolsNodeConfig{
-					Tools: loadAgentTools(resolvedID),
+					Tools: []tool.BaseTool{
+						readFileTool(sessionID),
+					},
 				},
 			},
 		},
