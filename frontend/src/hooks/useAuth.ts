@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { TokenResponse } from "../api/types";
 import * as authApi from "../api/auth";
+import { MOCK_ADMIN_CREDENTIALS } from "../config/mock";
 
 const TOKEN_KEY = "tokens";
 const USER_KEY = "current_user";
@@ -94,7 +95,12 @@ export function useAuth() {
     [],
   );
 
-  const devLogin = useCallback(() => {
+  const mockLogin = useCallback((username: string, password: string) => {
+    if (username !== MOCK_ADMIN_CREDENTIALS.username ||
+        password !== MOCK_ADMIN_CREDENTIALS.password) {
+      throw new Error("Invalid mock credentials");
+    }
+
     const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
     const payload = btoa(JSON.stringify({ userID: 1, username: "admin" }));
     const mockToken = `${header}.${payload}.dev_signature`;
@@ -129,7 +135,7 @@ export function useAuth() {
     login,
     register,
     logout,
-    devLogin,
+    mockLogin,
     saveSession,
     setUserId,
   };

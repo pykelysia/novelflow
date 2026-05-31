@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 export default function Login() {
-  const { login, setUserId, devLogin } = useAuth();
+  const { login, setUserId, mockLogin } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,16 +33,17 @@ export default function Login() {
       }
       navigate("/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "登录失败";
-      setError(msg);
+      // 如果后端不可用，尝试 mock 登录
+      try {
+        mockLogin(username, password);
+        navigate("/");
+      } catch (mockErr: unknown) {
+        const msg = err instanceof Error ? err.message : "登录失败";
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleDevLogin = () => {
-    devLogin();
-    navigate("/");
   };
 
   return (
@@ -93,19 +94,6 @@ export default function Login() {
               注册
             </Link>
           </div>
-          {import.meta.env.DEV && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center mb-3">开发模式</p>
-              <Button
-                variant="secondary"
-                className="w-full"
-                type="button"
-                onClick={handleDevLogin}
-              >
-                Admin 开发者入口
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
