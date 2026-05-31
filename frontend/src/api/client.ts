@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import type { ApiResponse } from "./types";
+import type { ApiResponse, TokenResponse } from "./types";
 
 const client = axios.create({
   baseURL: "/",
@@ -66,7 +66,7 @@ client.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const { data } = await axios.post<ApiResponse<Token>>("/auth/refresh", {
+        const { data } = await axios.post<ApiResponse<TokenResponse>>("/auth/refresh", {
           refresh_token: tokens.refresh_token,
         });
 
@@ -87,10 +87,5 @@ client.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-interface Token {
-  access_token: string;
-  refresh_token: string;
-}
 
 export default client;

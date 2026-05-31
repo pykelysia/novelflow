@@ -1,6 +1,10 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function Login() {
   const { login, setUserId, devLogin } = useAuth();
@@ -16,14 +20,8 @@ export default function Login() {
     setSubmitting(true);
     try {
       const tokens = await login(username, password);
-      // 解析用户 ID — 后端 JWT 的 userID claim 无法直接获取，调一次 /users 不方便
-      // 这里通过简单的 claims 解析获取（生产环境应有 /auth/me 接口）
-      // 先用 tokens 做后续请求，userID 可以从 /generate 等接口间接获取
-      // 临时方案：检查 localStorage 中的 userID
       let uid = localStorage.getItem("current_user");
       if (!uid) {
-        // 用 access_token 调用一个受保护接口拿到用户 id/信息
-        // 先默认从 token 的 payload 中解析（base64 decode）
         try {
           const payload = JSON.parse(atob(tokens.access_token.split(".")[1]));
           if (payload.userID) {
@@ -48,45 +46,68 @@ export default function Login() {
   };
 
   return (
-    <div className="form-card">
-      <h2>登录</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>用户名</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
-        <div className="form-group">
-          <label>密码</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        {error && <p className="error-msg">{error}</p>}
-        <button className="btn btn-primary" type="submit" disabled={submitting}>
-          {submitting ? "登录中..." : "登录"}
-        </button>
-      </form>
-      <div className="link-row">
-        还没有账号？<Link to="/register">注册</Link>
-      </div>
-      {import.meta.env.DEV && (
-        <div style={{ marginTop: 24, borderTop: "1px solid #eee", paddingTop: 16 }}>
-          <p style={{ fontSize: 13, color: "#888", marginBottom: 8, textAlign: "center" }}>
-            开发模式
-          </p>
-          <button className="btn btn-secondary" type="button" onClick={handleDevLogin}>
-            Admin 开发者入口
-          </button>
-        </div>
-      )}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-orange-50 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">
+            NovelFlow
+          </CardTitle>
+          <CardDescription className="text-base">登录您的账号开始创作</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">用户名</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoFocus
+                placeholder="请输入用户名"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">密码</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="请输入密码"
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-600 text-center bg-red-50 p-2 rounded-md">
+                {error}
+              </p>
+            )}
+            <Button className="w-full" type="submit" disabled={submitting}>
+              {submitting ? "登录中..." : "登录"}
+            </Button>
+          </form>
+          <div className="mt-4 text-center text-sm text-gray-600">
+            还没有账号？
+            <Link to="/register" className="text-primary-500 hover:text-primary-600 font-medium ml-1">
+              注册
+            </Link>
+          </div>
+          {import.meta.env.DEV && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center mb-3">开发模式</p>
+              <Button
+                variant="secondary"
+                className="w-full"
+                type="button"
+                onClick={handleDevLogin}
+              >
+                Admin 开发者入口
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,6 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useGenerate } from "../hooks/useGenerate";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const GENRE_OPTIONS = [
   "玄幻",
@@ -15,11 +23,9 @@ const GENRE_OPTIONS = [
 ];
 
 export default function Dashboard() {
-  const { isAuthenticated, tokens } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { tasks, loading, start, fetchTasks } = useGenerate();
-
-  console.log("[Dev] Dashboard render", { isAuthenticated, hasToken: !!tokens, tasks: tasks.length, loading });
 
   const [genre, setGenre] = useState("");
   const [concept, setConcept] = useState("");
@@ -69,12 +75,12 @@ export default function Dashboard() {
     }
   };
 
-  const statusClass = (s: string) => {
-    switch (s) {
-      case "pending": return "status-pending";
-      case "running": return "status-running";
-      case "completed": return "status-completed";
-      default: return "status-failed";
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "pending": return "pending";
+      case "running": return "running";
+      case "completed": return "completed";
+      default: return "failed";
     }
   };
 
@@ -88,119 +94,165 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="space-y-6">
       {import.meta.env.DEV && (
-        <div className="dev-badge" style={{ background: '#e3f2fd', border: '1px solid #1976d2', color: '#1565c0' }}>
-          调试: auth={isAuthenticated ? 'OK' : 'NO'}  tasks={tasks.length}  loading={loading ? 'Y' : 'N'}  dev_mode={!!localStorage.getItem('dev_mode')}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          调试: auth={isAuthenticated ? 'OK' : 'NO'} | tasks={tasks.length} | loading={loading ? 'Y' : 'N'} | dev_mode={!!localStorage.getItem('dev_mode')}
         </div>
       )}
-      {import.meta.env.DEV && (
-        <div className="dev-badge">开发模式 · 显示 mock 数据</div>
-      )}
-      <div className="card">
-        <h3>新建生成任务</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>题材 *</label>
-            <select value={genre} onChange={(e) => setGenre(e.target.value)} required>
-              <option value="">请选择</option>
-              {GENRE_OPTIONS.map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>创意概念 *</label>
-            <textarea
-              value={concept}
-              onChange={(e) => setConcept(e.target.value)}
-              placeholder="描述你的小说核心创意..."
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>主角设定</label>
-            <input
-              value={protagonist}
-              onChange={(e) => setProtagonist(e.target.value)}
-              placeholder="主角姓名、性格、能力等"
-            />
-          </div>
-          <div className="form-group">
-            <label>世界观设定</label>
-            <textarea
-              value={worldSetting}
-              onChange={(e) => setWorldSetting(e.target.value)}
-              placeholder="故事发生的世界背景..."
-            />
-          </div>
-          <div className="form-group">
-            <label>章节数量</label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={chapterCount}
-              onChange={(e) => setChapterCount(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-group">
-            <label>风格要求</label>
-            <input
-              value={style}
-              onChange={(e) => setStyle(e.target.value)}
-              placeholder="文风、节奏等要求"
-            />
-          </div>
-          <div className="form-group">
-            <label>其他要求</label>
-            <textarea
-              value={requirements}
-              onChange={(e) => setRequirements(e.target.value)}
-              placeholder="其他需要 AI 注意的事项..."
-            />
-          </div>
-          {error && <p className="error-msg">{error}</p>}
-          <button className="btn btn-primary" type="submit" disabled={submitting}>
-            {submitting ? "提交中..." : "开始生成"}
-          </button>
-        </form>
-      </div>
 
-      <div className="card">
-        <h3>任务列表 {loading && "(刷新中...)"}</h3>
-        {tasks.length === 0 ? (
-          <p style={{ color: "#888", fontSize: 14 }}>暂无任务</p>
-        ) : (
-          <ul className="task-list">
-            {tasks.map((t) => (
-              <li key={t.session_id} className="task-item">
-                <div>
-                  <span className={`status ${statusClass(t.status)}`}>
-                    {statusLabel(t.status)}
-                  </span>
-                  <span style={{ marginLeft: 8, fontSize: 13, color: "#666" }}>
-                    {t.created_at}
-                  </span>
-                </div>
-                <div>
-                  {t.status === "completed" ? (
-                    <button
-                      className="btn"
-                      style={{ background: "#e8f5e9", color: "#2e7d32" }}
-                      onClick={() => navigate(`/tasks/${t.session_id}`)}
-                    >
-                      查看
-                    </button>
-                  ) : t.status === "failed" ? (
-                    <span style={{ fontSize: 13, color: "#c62828" }}>{t.error || "失败"}</span>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">新建生成任务</CardTitle>
+          <CardDescription>填写小说创意，让 AI 为您创作精彩内容</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="genre">题材 *</Label>
+                <Select id="genre" value={genre} onChange={(e) => setGenre(e.target.value)} required>
+                  <option value="">请选择</option>
+                  {GENRE_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="chapterCount">章节数量</Label>
+                <Input
+                  id="chapterCount"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={chapterCount}
+                  onChange={(e) => setChapterCount(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="concept">创意概念 *</Label>
+              <Textarea
+                id="concept"
+                value={concept}
+                onChange={(e) => setConcept(e.target.value)}
+                placeholder="描述你的小说核心创意..."
+                required
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="protagonist">主角设定</Label>
+              <Input
+                id="protagonist"
+                value={protagonist}
+                onChange={(e) => setProtagonist(e.target.value)}
+                placeholder="主角姓名、性格、能力等"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="worldSetting">世界观设定</Label>
+              <Textarea
+                id="worldSetting"
+                value={worldSetting}
+                onChange={(e) => setWorldSetting(e.target.value)}
+                placeholder="故事发生的世界背景..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="style">风格要求</Label>
+              <Input
+                id="style"
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                placeholder="文风、节奏等要求"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="requirements">其他要求</Label>
+              <Textarea
+                id="requirements"
+                value={requirements}
+                onChange={(e) => setRequirements(e.target.value)}
+                placeholder="其他需要 AI 注意的事项..."
+                rows={2}
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                {error}
+              </p>
+            )}
+
+            <Button className="w-full" type="submit" disabled={submitting}>
+              {submitting ? "提交中..." : "开始生成"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            任务列表
+            {loading && <span className="text-sm font-normal text-gray-500">(刷新中...)</span>}
+          </CardTitle>
+          <CardDescription>查看您的创作任务进度</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading && tasks.length === 0 ? (
+            <div className="space-y-3">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-sm">暂无任务</p>
+              <p className="text-gray-400 text-xs mt-1">创建您的第一个小说生成任务吧！</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tasks.map((t) => (
+                <Card key={t.session_id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge variant={getStatusVariant(t.status) as any}>
+                          {statusLabel(t.status)}
+                        </Badge>
+                        <span className="text-sm text-gray-600">
+                          {t.created_at}
+                        </span>
+                      </div>
+                      <div>
+                        {t.status === "completed" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/tasks/${t.session_id}`)}
+                            className="border-green-200 text-green-700 hover:bg-green-50"
+                          >
+                            查看
+                          </Button>
+                        ) : t.status === "failed" ? (
+                          <span className="text-sm text-red-600">{t.error || "失败"}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
