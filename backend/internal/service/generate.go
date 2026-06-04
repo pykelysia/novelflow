@@ -13,7 +13,7 @@ import (
 
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
-	"novelflow/database/mongodb"
+	"novelflow/cache"
 	"novelflow/database/task"
 
 	"github.com/google/uuid"
@@ -99,7 +99,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 	}
 
 	svc.WG.Add(1)
-	go s.runGeneration(svc.MongoDB, svc.Ctx, &svc.WG, sessionID, userID, req)
+	go s.runGeneration(svc, &svc.WG, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -108,7 +108,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 }
 
 func (s *GenerateService) GetGenerationStatus(svc *servicecontext.ServiceContext, userID uint, sessionID string) (*GenerateStatusResponse, error) {
-	t, err := task.GetTask(context.Background(), svc.MongoDB, sessionID)
+	t, err := getCachedTask(context.Background(), svc, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s *GenerateService) GetGenerationResult(svc *servicecontext.ServiceContext
 		return nil, ErrTaskNotFound
 	}
 
-	t, err := task.GetTask(context.Background(), svc.MongoDB, sessionID)
+	t, err := getCachedTask(context.Background(), svc, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -204,24 +204,51 @@ func (s *GenerateService) ListUserTasks(svc *servicecontext.ServiceContext, user
 	return &ListTasksResponse{Tasks: items}, nil
 }
 
-func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
+// getCachedTask 先查 Redis，miss 时查 MongoDB 并回填缓存
+func getCachedTask(ctx context.Context, svc *servicecontext.ServiceContext, sessionID string) (*task.Task, error) {
+	key := cache.TaskKeyPrefix + sessionID
+
+	var t task.Task
+	if hit, err := svc.RedisClient.GetJSON(ctx, key, &t); err == nil && hit {
+		return &t, nil
+	}
+
+	result, err := task.GetTask(ctx, svc.MongoDB, sessionID)
+	if err != nil || result == nil {
+		return result, err
+	}
+
+	_ = svc.RedisClient.SetJSON(ctx, key, result, cache.TaskCacheTTL)
+	return result, nil
+}
+
+// invalidateTaskCache 使任务缓存失效
+func invalidateTaskCache(ctx context.Context, svc *servicecontext.ServiceContext, sessionID string) {
+	_ = svc.RedisClient.Del(ctx, cache.TaskKeyPrefix+sessionID)
+}
+
+func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
 	defer wg.Done()
 	defer func() { <-s.sem }()
-	ctx, cancel := context.WithCancel(parentCtx)
+	ctx, cancel := context.WithCancel(svc.Ctx)
 	defer cancel()
+
 	prompt, err := composePrompt(req)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc, sessionID)
 		return
 	}
 
-	if err := task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskRunning, ""); err != nil {
+	if err := task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskRunning, ""); err != nil {
 		return
 	}
+	invalidateTaskCache(ctx, svc, sessionID)
 
 	a, err := agent.NewMainAgent(ctx, sessionID, userID)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc, sessionID)
 		return
 	}
 
@@ -233,11 +260,13 @@ func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, parentCtx cont
 		return true
 	})
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc, sessionID)
 		return
 	}
 
-	task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskCompleted, "")
+	task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskCompleted, "")
+	invalidateTaskCache(ctx, svc, sessionID)
 }
 
 var promptTmpl = template.Must(template.New("prompt").Parse(`请创作一部{{.Genre}}小说。

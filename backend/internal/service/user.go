@@ -1,7 +1,11 @@
 package service
 
 import (
+	"context"
+	"fmt"
+
 	"novelflow/backend/internal/servicecontext"
+	"novelflow/cache"
 	sqldb "novelflow/database/mysql"
 )
 
@@ -13,23 +17,34 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
-// GetUserByID 根据 ID 获取用户
+// GetUserByID 根据 ID 获取用户（cache-aside）
 func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (*sqldb.User, error) {
-	user, err := svc.UserModel.FindByID(id)
+	ctx := context.Background()
+	key := fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id)
+
+	var user sqldb.User
+	if hit, err := svc.RedisClient.GetJSON(ctx, key, &user); err == nil && hit {
+		return &user, nil
+	}
+
+	u, err := svc.UserModel.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
-	return user, nil
+
+	_ = svc.RedisClient.SetJSON(ctx, key, u, cache.UserCacheTTL)
+	_ = svc.RedisClient.SetJSON(ctx, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, u.Username), u, cache.UserCacheTTL)
+
+	return u, nil
 }
 
-// UpdateUser 更新用户
+// UpdateUser 更新用户，成功后 invalidate 缓存
 func (s *UserService) UpdateUser(svc *servicecontext.ServiceContext, id uint, req *sqldb.UpdateUserRequest) (*sqldb.User, error) {
 	user, err := svc.UserModel.FindByID(id)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	// 更新字段
 	if req.Email != "" {
 		user.Email = req.Email
 	}
@@ -47,13 +62,29 @@ func (s *UserService) UpdateUser(svc *servicecontext.ServiceContext, id uint, re
 		return nil, ErrUpdateFailed
 	}
 
+	ctx := context.Background()
+	_ = svc.RedisClient.Del(ctx,
+		fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id),
+		fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, user.Username),
+	)
+
 	return user, nil
 }
 
-// DeleteUser 删除用户
+// DeleteUser 删除用户，成功后 invalidate 缓存
 func (s *UserService) DeleteUser(svc *servicecontext.ServiceContext, id uint) error {
+	user, _ := svc.UserModel.FindByID(id)
+
 	if err := svc.UserModel.Delete(id); err != nil {
 		return ErrDeleteFailed
 	}
+
+	ctx := context.Background()
+	keys := []string{fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id)}
+	if user != nil {
+		keys = append(keys, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, user.Username))
+	}
+	_ = svc.RedisClient.Del(ctx, keys...)
+
 	return nil
 }
