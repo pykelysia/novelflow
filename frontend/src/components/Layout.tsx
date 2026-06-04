@@ -24,6 +24,13 @@ export default function Layout() {
           <nav className="flex gap-3">
             <Button
               variant="ghost"
+              onClick={() => navigate("/tasks")}
+              className="text-white hover:bg-white/20"
+            >
+              任务
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => navigate("/")}
               className="text-white hover:bg-white/20"
             >
@@ -78,7 +85,7 @@ export default function Layout() {
           </div>
         </div>
       )}
-      <main className="flex-1 container mx-auto px-6 py-8 max-w-6xl">
+      <main className="flex-1 flex flex-col">
         <Outlet />
       </main>
     </div>

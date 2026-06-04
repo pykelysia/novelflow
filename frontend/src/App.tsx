@@ -4,7 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import TaskDetail from "./pages/TaskDetail";
+import TaskListPage from "./pages/TaskListPage";
 
 export default function App() {
   return (
@@ -15,7 +15,8 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/tasks/:sessionId" element={<TaskDetail />} />
+            <Route path="/tasks" element={<TaskListPage />} />
+            <Route path="/tasks/:sessionId" element={<TaskListPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
