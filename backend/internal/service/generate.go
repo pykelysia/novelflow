@@ -14,6 +14,7 @@ import (
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
+	"novelflow/database/mongodb"
 	"novelflow/database/task"
 
 	"github.com/google/uuid"
@@ -99,7 +100,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 	}
 
 	svc.WG.Add(1)
-	go s.runGeneration(svc, &svc.WG, sessionID, userID, req)
+	go s.runGeneration(svc.MongoDB, svc.RedisClient, svc.Ctx, &svc.WG, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -223,32 +224,32 @@ func getCachedTask(ctx context.Context, svc *servicecontext.ServiceContext, sess
 }
 
 // invalidateTaskCache 使任务缓存失效
-func invalidateTaskCache(ctx context.Context, svc *servicecontext.ServiceContext, sessionID string) {
-	_ = svc.RedisClient.Del(ctx, cache.TaskKeyPrefix+sessionID)
+func invalidateTaskCache(ctx context.Context, rc *cache.Client, sessionID string) {
+	_ = rc.Del(ctx, cache.TaskKeyPrefix+sessionID)
 }
 
-func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
+func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, rc *cache.Client, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
 	defer wg.Done()
 	defer func() { <-s.sem }()
-	ctx, cancel := context.WithCancel(svc.Ctx)
+	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 
 	prompt, err := composePrompt(req)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, svc, sessionID)
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, rc, sessionID)
 		return
 	}
 
-	if err := task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskRunning, ""); err != nil {
+	if err := task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskRunning, ""); err != nil {
 		return
 	}
-	invalidateTaskCache(ctx, svc, sessionID)
+	invalidateTaskCache(ctx, rc, sessionID)
 
 	a, err := agent.NewMainAgent(ctx, sessionID, userID)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, svc, sessionID)
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, rc, sessionID)
 		return
 	}
 
@@ -260,13 +261,13 @@ func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, wg *
 		return true
 	})
 	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, svc, sessionID)
+		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, rc, sessionID)
 		return
 	}
 
-	task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskCompleted, "")
-	invalidateTaskCache(ctx, svc, sessionID)
+	task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskCompleted, "")
+	invalidateTaskCache(ctx, rc, sessionID)
 }
 
 var promptTmpl = template.Must(template.New("prompt").Parse(`请创作一部{{.Genre}}小说。

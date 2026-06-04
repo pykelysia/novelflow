@@ -55,7 +55,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, user.ToResponse())
+	response.Success(c, user)
 }
 
 // UpdateUser 更新用户

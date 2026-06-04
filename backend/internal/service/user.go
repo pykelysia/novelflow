@@ -17,14 +17,14 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
-// GetUserByID 根据 ID 获取用户（cache-aside）
-func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (*sqldb.User, error) {
+// GetUserByID 根据 ID 获取用户（cache-aside），返回不含密码的响应对象
+func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (*sqldb.UserResponse, error) {
 	ctx := context.Background()
 	key := fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id)
 
-	var user sqldb.User
-	if hit, err := svc.RedisClient.GetJSON(ctx, key, &user); err == nil && hit {
-		return &user, nil
+	var resp sqldb.UserResponse
+	if hit, err := svc.RedisClient.GetJSON(ctx, key, &resp); err == nil && hit {
+		return &resp, nil
 	}
 
 	u, err := svc.UserModel.FindByID(id)
@@ -32,10 +32,11 @@ func (s *UserService) GetUserByID(svc *servicecontext.ServiceContext, id uint) (
 		return nil, ErrUserNotFound
 	}
 
-	_ = svc.RedisClient.SetJSON(ctx, key, u, cache.UserCacheTTL)
-	_ = svc.RedisClient.SetJSON(ctx, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, u.Username), u, cache.UserCacheTTL)
+	r := u.ToResponse()
+	_ = svc.RedisClient.SetJSON(ctx, key, r, cache.UserCacheTTL)
+	_ = svc.RedisClient.SetJSON(ctx, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, u.Username), r, cache.UserCacheTTL)
 
-	return u, nil
+	return r, nil
 }
 
 // UpdateUser 更新用户，成功后 invalidate 缓存
@@ -73,18 +74,20 @@ func (s *UserService) UpdateUser(svc *servicecontext.ServiceContext, id uint, re
 
 // DeleteUser 删除用户，成功后 invalidate 缓存
 func (s *UserService) DeleteUser(svc *servicecontext.ServiceContext, id uint) error {
-	user, _ := svc.UserModel.FindByID(id)
+	user, err := svc.UserModel.FindByID(id)
+	if err != nil {
+		return ErrUserNotFound
+	}
 
 	if err := svc.UserModel.Delete(id); err != nil {
 		return ErrDeleteFailed
 	}
 
 	ctx := context.Background()
-	keys := []string{fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id)}
-	if user != nil {
-		keys = append(keys, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, user.Username))
-	}
-	_ = svc.RedisClient.Del(ctx, keys...)
+	_ = svc.RedisClient.Del(ctx,
+		fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, id),
+		fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, user.Username),
+	)
 
 	return nil
 }
