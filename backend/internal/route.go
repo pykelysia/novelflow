@@ -52,4 +52,17 @@ func SetupRoutes(svc *servicecontext.ServiceContext, router *gin.Engine) {
 		generateGroup.GET("/:session_id", generateHandler.GetGenerationStatus)
 		generateGroup.GET("/:session_id/result", generateHandler.GetGenerationResult)
 	}
+
+	// rules 路由（需要登录）
+	ruleHandler := handler.NewRuleHandler(svc)
+	rulesGroup := router.Group("/rules")
+	rulesGroup.Use(middleware.AuthMiddleware(svc))
+	{
+		rulesGroup.POST("", ruleHandler.CreateRule)
+		rulesGroup.GET("", ruleHandler.ListRules)
+		rulesGroup.GET("/:id", ruleHandler.GetRule)
+		rulesGroup.PUT("/:id", ruleHandler.UpdateRule)
+		rulesGroup.PATCH("/:id/toggle", ruleHandler.ToggleRule)
+		rulesGroup.DELETE("/:id", ruleHandler.DeleteRule)
+	}
 }
