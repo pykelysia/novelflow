@@ -5,6 +5,7 @@ config.yaml
 TODO.md
 
 .skills/
+.claude/
 
 test_data/
 
