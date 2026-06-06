@@ -14,7 +14,6 @@ import (
 	agent "novelflow/agents"
 	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
-	"novelflow/database/mongodb"
 	"novelflow/database/task"
 
 	"github.com/google/uuid"
@@ -100,7 +99,7 @@ func (s *GenerateService) StartGeneration(svc *servicecontext.ServiceContext, us
 	}
 
 	svc.WG.Add(1)
-	go s.runGeneration(svc.MongoDB, svc.RedisClient, svc.Ctx, &svc.WG, sessionID, userID, req)
+	go s.runGeneration(svc, svc.Ctx, &svc.WG, sessionID, userID, req)
 
 	return &GenerateResponse{
 		SessionID: sessionID,
@@ -228,7 +227,7 @@ func invalidateTaskCache(ctx context.Context, rc *cache.Client, sessionID string
 	_ = rc.Del(ctx, cache.TaskKeyPrefix+sessionID)
 }
 
-func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, rc *cache.Client, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
+func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, parentCtx context.Context, wg *sync.WaitGroup, sessionID string, userID uint, req *GenerateRequest) {
 	defer wg.Done()
 	defer func() { <-s.sem }()
 	ctx, cancel := context.WithCancel(parentCtx)
@@ -236,20 +235,32 @@ func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, rc *cache.Clie
 
 	prompt, err := composePrompt(req)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, rc, sessionID)
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc.RedisClient, sessionID)
 		return
 	}
 
-	if err := task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskRunning, ""); err != nil {
+	if err := task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskRunning, ""); err != nil {
 		return
 	}
-	invalidateTaskCache(ctx, rc, sessionID)
+	invalidateTaskCache(ctx, svc.RedisClient, sessionID)
 
-	a, err := agent.NewMainAgent(ctx, sessionID, userID)
+	ruleService := NewRuleService()
+	enabledRules, err := ruleService.GetEnabledRules(svc, userID)
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, rc, sessionID)
+		enabledRules = nil
+	}
+
+	intent := &agent.GenerationIntent{
+		Genre:        req.Genre,
+		Concept:      req.Concept,
+		Style:        req.Style,
+		Requirements: req.Requirements,
+	}
+	a, err := agent.RunWithRules(ctx, sessionID, userID, enabledRules, intent)
+	if err != nil {
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc.RedisClient, sessionID)
 		return
 	}
 
@@ -261,13 +272,13 @@ func (s *GenerateService) runGeneration(mdb *mongodb.MongoClient, rc *cache.Clie
 		return true
 	})
 	if err != nil {
-		task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, rc, sessionID)
+		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+		invalidateTaskCache(ctx, svc.RedisClient, sessionID)
 		return
 	}
 
-	task.UpdateTaskStatus(ctx, mdb, sessionID, task.TaskCompleted, "")
-	invalidateTaskCache(ctx, rc, sessionID)
+	task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskCompleted, "")
+	invalidateTaskCache(ctx, svc.RedisClient, sessionID)
 }
 
 var promptTmpl = template.Must(template.New("prompt").Parse(`请创作一部{{.Genre}}小说。

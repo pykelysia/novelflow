@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, error) {
+func NewMainAgent(ctx context.Context, sessionID string, userID uint, rulesContent string) (*Agent, error) {
 	mdb, err := mongodb.NewMongoDB()
 	if err != nil {
 		return nil, err
@@ -55,7 +55,10 @@ func NewMainAgent(ctx context.Context, sessionID string, userID uint) (*Agent, e
 		},
 		MongoClient:  mdb,
 		Session:      session,
-		SystemPrompt: strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", resolvedID),
+		SystemPrompt: strings.ReplaceAll(
+				strings.ReplaceAll(mainAgentSystemPrompt, "{session_id}", resolvedID),
+				"{user_rules}", rulesContent,
+			),
 	}
 
 	// 创建质量审查 sub-agent

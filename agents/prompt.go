@@ -76,6 +76,10 @@ var (
 
 		你不直接写入章节文件。所有正文的写入和编辑必须委托给写作子代理（novel_write_agent）。
 		你只负责编排流程、审查质量、回复用户。
+
+		## 用户自定义写作规则
+
+		{user_rules}
 		`
 
 	outlineAgentSystemPrompt = `
