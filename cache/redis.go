@@ -19,9 +19,11 @@ const (
 	UserIDKeyPrefix       = "user:id:"
 	UserUsernameKeyPrefix = "user:username:"
 	TaskKeyPrefix         = "task:"
+	UserRulesKeyPrefix    = "user:rules:enabled:"
 
 	UserCacheTTL = 10 * time.Minute
 	TaskCacheTTL = 3 * time.Second
+	RulesCacheTTL = 5 * time.Minute
 )
 
 // JWTBlacklistConfig JWT黑名单配置
