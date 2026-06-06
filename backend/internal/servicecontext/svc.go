@@ -21,6 +21,7 @@ type ServiceContext struct {
 	UserSessionModel *sqldb.UserSessionRepository
 	RedisClient      *cache.Client
 	MongoDB          *mongodb.MongoClient
+	RuleRepo         *mongodb.RuleRepository
 	WG               sync.WaitGroup
 	Ctx              context.Context
 	Cancel           context.CancelFunc
@@ -57,6 +58,7 @@ func NewServiceContext() *ServiceContext {
 		log.Fatalf("Failed to init mongodb: %v", err)
 	}
 	svc.MongoDB = mdb
+	svc.RuleRepo = mongodb.NewRuleRepository(mdb)
 
 	svc.Ctx, svc.Cancel = context.WithCancel(context.Background())
 
