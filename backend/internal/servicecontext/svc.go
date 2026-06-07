@@ -2,8 +2,8 @@ package servicecontext
 
 import (
 	"context"
-	"log"
 	"novelflow/backend/pkg/jwt"
+	"novelflow/backend/pkg/logger"
 	"novelflow/cache"
 	"novelflow/database/mongodb"
 	sqldb "novelflow/database/mysql"
@@ -40,7 +40,7 @@ func NewServiceContext() *ServiceContext {
 
 	db, err := sqldb.NewDB()
 	if err != nil {
-		log.Fatalf("Failed to init database: %v", err)
+		logger.Fatal("failed to init database", "err", err)
 	}
 	svc.db = db
 	svc.UserModel = sqldb.NewUserRepository(db)
@@ -49,13 +49,13 @@ func NewServiceContext() *ServiceContext {
 	// 初始化 Redis
 	redisClient, err := cache.InitRedis()
 	if err != nil {
-		log.Fatalf("Failed to init redis: %v", err)
+		logger.Fatal("failed to init redis", "err", err)
 	}
 	svc.RedisClient = redisClient
 
 	mdb, err := mongodb.NewMongoDB()
 	if err != nil {
-		log.Fatalf("Failed to init mongodb: %v", err)
+		logger.Fatal("failed to init mongodb", "err", err)
 	}
 	svc.MongoDB = mdb
 	svc.RuleRepo = mongodb.NewRuleRepository(mdb)

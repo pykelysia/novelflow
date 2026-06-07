@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
+	"novelflow/backend/pkg/logger"
 	"novelflow/database/mongodb"
 
 	"github.com/cloudwego/eino/components/prompt"
@@ -39,7 +39,7 @@ func buildRulesContent(ctx context.Context, rules []mongodb.Rule, intent *Genera
 	}
 	content, err := runRuleSelectionChain(ctx, rules, intent)
 	if err != nil {
-		log.Printf("[rules] 规则筛选失败，降级注入全部规则: %v", err)
+		logger.Warn("[rules] 规则筛选失败，降级注入全部规则", "err", err)
 		return formatRulesContent(rules)
 	}
 	return content
@@ -111,13 +111,13 @@ func parseSelectionResponse(raw string, allRules []mongodb.Rule, idIndex map[str
 	start := strings.Index(raw, "{")
 	end := strings.LastIndex(raw, "}")
 	if start == -1 || end == -1 || end <= start {
-		log.Printf("[rules] LLM 返回格式无效，降级注入全部规则")
+		logger.Warn("[rules] LLM 返回格式无效，降级注入全部规则")
 		return formatRulesContent(allRules), nil
 	}
 
 	var result ruleSelectionResult
 	if err := json.Unmarshal([]byte(raw[start:end+1]), &result); err != nil {
-		log.Printf("[rules] JSON 解析失败，降级注入全部规则: %v", err)
+		logger.Warn("[rules] JSON 解析失败，降级注入全部规则", "err", err)
 		return formatRulesContent(allRules), nil
 	}
 
