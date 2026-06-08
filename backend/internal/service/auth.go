@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"novelflow/backend/internal/servicecontext"
+	"novelflow/cache"
 	sqldb "novelflow/database/mysql"
 )
 
@@ -52,17 +54,14 @@ func (l *AuthService) Login(svc *servicecontext.ServiceContext, req *LoginReques
 		return nil, ErrInvalidCredential
 	}
 
-	// 验证密码
 	if !svc.UserModel.VerifyPassword(user, req.Password) {
 		return nil, ErrInvalidCredential
 	}
 
-	// 检查用户状态
 	if user.Status != 1 {
 		return nil, errors.New("user account is disabled")
 	}
 
-	// 生成令牌
 	accessToken, err := svc.JwtUtil.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
@@ -72,6 +71,8 @@ func (l *AuthService) Login(svc *servicecontext.ServiceContext, req *LoginReques
 	if err != nil {
 		return nil, err
 	}
+
+	warmUserCache(svc, user)
 
 	return &TokenResponse{
 		AccessToken:  accessToken,
@@ -89,7 +90,6 @@ func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *Register
 		return nil, ErrUserAlreadyExists
 	}
 
-	// 检查邮箱是否已存在
 	if req.Email != "" {
 		emailExists, err := svc.UserModel.ExistsByEmail(req.Email)
 		if err != nil {
@@ -100,7 +100,6 @@ func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *Register
 		}
 	}
 
-	// 创建用户
 	user := &sqldb.User{
 		Username: req.Username,
 		Email:    req.Email,
@@ -108,7 +107,6 @@ func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *Register
 		Status:   1,
 	}
 
-	// 密码加密
 	if err := svc.UserModel.HashPassword(user, req.Password); err != nil {
 		return nil, err
 	}
@@ -122,7 +120,6 @@ func (l *AuthService) Register(svc *servicecontext.ServiceContext, req *Register
 
 // RefreshToken 刷新令牌
 func (l *AuthService) RefreshToken(svc *servicecontext.ServiceContext, req *RefreshRequest) (*TokenResponse, error) {
-	// 验证刷新令牌
 	claims, err := svc.JwtUtil.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, err
@@ -133,12 +130,10 @@ func (l *AuthService) RefreshToken(svc *servicecontext.ServiceContext, req *Refr
 		return nil, ErrUserNotFound
 	}
 
-	// 检查用户状态
 	if user.Status != 1 {
 		return nil, errors.New("user account is disabled")
 	}
 
-	// 生成新令牌
 	accessToken, err := svc.JwtUtil.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
 		return nil, err
@@ -163,4 +158,10 @@ func (l *AuthService) Logout(svc *servicecontext.ServiceContext, req *LogoutRequ
 	_ = svc.RedisClient.AddJWTToBlacklist(ctx, req.RefreshToken)
 
 	return nil
+}
+
+func warmUserCache(svc *servicecontext.ServiceContext, user *sqldb.User) {
+	ctx := context.Background()
+	_ = svc.RedisClient.SetJSON(ctx, fmt.Sprintf("%s%d", cache.UserIDKeyPrefix, user.ID), user, cache.UserCacheTTL)
+	_ = svc.RedisClient.SetJSON(ctx, fmt.Sprintf("%s%s", cache.UserUsernameKeyPrefix, user.Username), user, cache.UserCacheTTL)
 }

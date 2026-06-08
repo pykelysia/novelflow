@@ -74,4 +74,8 @@ func bindEnvVariables() {
 	// Storage 配置
 	viper.BindEnv("storage.novels_dir", "NOVELFLOW_STORAGE_NOVELS_DIR")
 
+	// Log 配置
+	viper.BindEnv("log.output_dir", "NOVELFLOW_LOG_OUTPUT_DIR")
+	viper.BindEnv("log.level", "NOVELFLOW_LOG_LEVEL")
+	viper.BindEnv("log.console", "NOVELFLOW_LOG_CONSOLE")
 }

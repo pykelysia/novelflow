@@ -14,6 +14,7 @@
 | 缓存 | Redis |
 | 认证 | JWT (Access/Refresh Token) |
 | 配置 | Viper + YAML + 环境变量 |
+| 日志 | slog + 按日切割文件 |
 
 ## 项目结构
 

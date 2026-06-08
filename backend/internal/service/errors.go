@@ -11,4 +11,6 @@ var (
 	ErrTaskNotFound      = errors.New("task not found")
 	ErrTaskForbidden     = errors.New("task does not belong to user")
 	ErrTooManyRequests   = errors.New("too many concurrent generation requests")
+	ErrRuleNotFound      = errors.New("rule not found")
+	ErrRuleForbidden     = errors.New("rule does not belong to user")
 )

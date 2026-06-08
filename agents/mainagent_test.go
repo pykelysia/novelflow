@@ -11,7 +11,7 @@ func TestMainAgent(t *testing.T) {
 	ctx := context.Background()
 	config.LoadConfig("../config.yaml")
 
-	ma, err := NewMainAgent(ctx, "", 0)
+	ma, err := NewMainAgent(ctx, "", 0, "")
 	if err != nil {
 		t.Error(err)
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 
 	"novelflow/backend/internal"
 	"novelflow/backend/internal/servicecontext"
+	"novelflow/backend/pkg/logger"
 	"novelflow/config"
 	"novelflow/database/task"
 
@@ -22,7 +22,19 @@ import (
 func main() {
 	// 加载配置
 	if err := config.LoadConfig("config/config.yaml"); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		// 配置加载失败时 logger 尚未初始化，用标准输出兜底
+		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 初始化日志系统
+	if err := logger.Init(logger.Config{
+		OutputDir: viper.GetString("log.output_dir"),
+		Level:     viper.GetString("log.level"),
+		Console:   viper.GetBool("log.console"),
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to init logger: %v\n", err)
+		os.Exit(1)
 	}
 
 	svc := servicecontext.NewServiceContext()
@@ -30,9 +42,9 @@ func main() {
 
 	// 启动恢复：将上次残留的 running 任务标记为 failed
 	if count, err := task.MarkRunningTasksAsFailed(context.Background(), svc.MongoDB, "server restarted"); err != nil {
-		log.Printf("Warning: failed to recover running tasks: %v", err)
+		logger.Warn("failed to recover running tasks", "err", err)
 	} else if count > 0 {
-		log.Printf("Recovered %d task(s) from previous run (marked as failed)", count)
+		logger.Info("recovered tasks from previous run", "count", count)
 	}
 
 	// 创建 Gin 路由器
@@ -56,9 +68,9 @@ func main() {
 
 	// 启动 HTTP 服务器（goroutine 非阻塞）
 	go func() {
-		log.Printf("Server starting on %s", addr)
+		logger.Info("server starting", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			logger.Fatal("failed to start server", "err", err)
 		}
 	}()
 
@@ -66,7 +78,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-quit
-	log.Printf("Received signal %v, shutting down...", sig)
+	logger.Info("shutting down", "signal", sig)
 
 	// 通知所有 in-flight 生成任务停止
 	svc.Cancel()
@@ -77,7 +89,7 @@ func main() {
 
 	// 停止接收新请求，等待活跃连接完成
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
+		logger.Error("server forced to shutdown", "err", err)
 	}
 
 	// 等待所有 in-flight 生成 goroutine 完成
@@ -88,10 +100,10 @@ func main() {
 	}()
 	select {
 	case <-done:
-		log.Println("All in-flight generations completed")
+		logger.Info("all in-flight generations completed")
 	case <-shutdownCtx.Done():
-		log.Println("Shutdown deadline exceeded; some generations may be incomplete")
+		logger.Warn("shutdown deadline exceeded; some generations may be incomplete")
 	}
 
-	log.Println("Server exited")
+	logger.Info("server exited")
 }
