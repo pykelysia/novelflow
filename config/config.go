@@ -78,4 +78,9 @@ func bindEnvVariables() {
 	viper.BindEnv("log.output_dir", "NOVELFLOW_LOG_OUTPUT_DIR")
 	viper.BindEnv("log.level", "NOVELFLOW_LOG_LEVEL")
 	viper.BindEnv("log.console", "NOVELFLOW_LOG_CONSOLE")
+
+	// Context compress 配置
+	viper.BindEnv("context_compress.threshold_chars", "NOVELFLOW_CONTEXT_COMPRESS_THRESHOLD_CHARS")
+	viper.BindEnv("context_compress.keep_recent_msgs", "NOVELFLOW_CONTEXT_COMPRESS_KEEP_RECENT_MSGS")
+	viper.BindEnv("context_compress.keep_recent_tools", "NOVELFLOW_CONTEXT_COMPRESS_KEEP_RECENT_TOOLS")
 }
