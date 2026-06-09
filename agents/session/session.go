@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"novelflow/database/mongodb"
+	"novelflow/backend/pkg/logger"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/eino/adk"
@@ -33,6 +35,9 @@ type MessageStore interface {
 type Session struct {
 	SessionPart SessionPart
 	mongoClient *mongodb.MongoClient
+	rawCache    []Message
+	loaded      bool
+	mu          sync.Mutex
 }
 
 func NewSession(ctx context.Context, sid string, userID uint, mdb *mongodb.MongoClient) (*Session, error) {
@@ -89,29 +94,46 @@ func (s *Session) Save() error {
 func (s *Session) Append(msg Message) error {
 	msg.SessionID = s.SessionPart.SID
 	msg.CreatedAt = time.Now()
-	_, err := s.mongoClient.Database("novelflow").Collection("messages").InsertOne(
-		context.TODO(),
-		msg,
-	)
-	return err
+
+	s.mu.Lock()
+	s.rawCache = append(s.rawCache, msg)
+	s.mu.Unlock()
+
+	go func() {
+		if _, err := s.mongoClient.Database("novelflow").Collection("messages").InsertOne(context.Background(), msg); err != nil {
+			logger.Warn("[session] async append failed", "sid", s.SessionPart.SID, "err", err)
+		}
+	}()
+
+	return nil
 }
 
-func (s *Session) Load() (msgs []adk.Message) {
+func (s *Session) Load() []adk.Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.loaded {
+		return buildADKMessages(s.rawCache)
+	}
+
+	var messages []Message
 	cursor, err := s.mongoClient.Database("novelflow").Collection("messages").Find(
 		context.TODO(),
 		bson.D{{Key: "session_id", Value: s.SessionPart.SID}},
 		options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}}),
 	)
-	if err != nil {
-		return nil
-	}
-	defer cursor.Close(context.TODO())
-
-	var messages []Message
-	if err := cursor.All(context.TODO(), &messages); err != nil {
-		return nil
+	if err == nil {
+		defer cursor.Close(context.TODO())
+		_ = cursor.All(context.TODO(), &messages)
 	}
 
+	s.rawCache = messages
+	s.loaded = true
+	return buildADKMessages(messages)
+}
+
+func buildADKMessages(messages []Message) []adk.Message {
+	var msgs []adk.Message
 	toolCallIdx := 0
 	for _, m := range messages {
 		switch m.Type {
