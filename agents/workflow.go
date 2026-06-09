@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"novelflow/agents/core"
 	"novelflow/backend/pkg/logger"
 	"novelflow/database/mongodb"
 
@@ -51,7 +52,7 @@ func buildRulesContent(ctx context.Context, rules []mongodb.Rule, intent *Genera
 func runRuleSelectionChain(ctx context.Context, rules []mongodb.Rule, intent *GenerationIntent) (string, error) {
 	idIndex := buildIDIndex(rules)
 
-	cm, err := getLiteChatModel(ctx)
+	cm, err := core.GetLiteChatModel(ctx)
 	if err != nil {
 		return "", fmt.Errorf("获取 lite_llm 失败: %w", err)
 	}
