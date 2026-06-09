@@ -54,6 +54,7 @@ func NewMainAgent(ctx context.Context, mdb *mongodb.MongoClient, sessionID strin
 				ToolsNodeConfig: compose.ToolsNodeConfig{
 					Tools: []tool.BaseTool{
 						tools.ReadFileTool(resolvedID),
+						tools.RetrieveArchivedResultTool(mdb),
 					},
 				},
 			},

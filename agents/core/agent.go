@@ -9,7 +9,6 @@ import (
 	"novelflow/database/mongodb"
 
 	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/adk/middlewares/summarization"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
 	"github.com/cloudwego/eino/schema"
 )
@@ -63,11 +62,11 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 		config.Instruction = config.SystemPrompt
 	}
 
-	summarizationMW, err := buildSummarization(ctx)
+	compressMW, err := newCompressMiddleware(ctx, s)
 	if err != nil {
 		return nil, err
 	}
-	config.Handlers = append(config.Handlers, &SafeToolMiddleware{}, summarizationMW, newSessionMiddleware(s))
+	config.Handlers = append(config.Handlers, &SafeToolMiddleware{}, compressMW, newSessionMiddleware(s))
 
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
@@ -122,18 +121,3 @@ func (a *Agent) RunA(ctx context.Context, message session.Message, handlerFunc S
 	return nil
 }
 
-func buildSummarization(ctx context.Context) (adk.ChatModelAgentMiddleware, error) {
-	cm, err := GetLiteChatModel(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	summarizationMW, err := summarization.New(ctx, &summarization.Config{
-		Model: cm,
-		Trigger: &summarization.TriggerCondition{
-			ContextTokens: 200000,
-		},
-	})
-
-	return summarizationMW, err
-}
