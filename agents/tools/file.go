@@ -1,4 +1,4 @@
-package agent
+package tools
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func writeFileTool(sessionID string) tool.BaseTool {
+func WriteFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		writeFileToolInfo(),
 		writeFileToolInvoke(sessionID),
@@ -69,7 +69,7 @@ func writeFileToolInvoke(sessionID string) utils.InvokeFunc[writeFileToolInput, 
 	}
 }
 
-func listChapterFilesTool(sessionID string) tool.BaseTool {
+func ListChapterFilesTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		listChapterFilesToolInfo(),
 		listChapterFilesToolInvoke(sessionID),
@@ -111,7 +111,7 @@ func listChapterFilesToolInvoke(sessionID string) utils.InvokeFunc[struct{}, str
 	}
 }
 
-func readFileTool(sessionID string) tool.BaseTool {
+func ReadFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		readFileToolInfo(),
 		readFileToolInvoke(sessionID),
@@ -200,14 +200,14 @@ func editFileToolInvoke(sessionID string) utils.InvokeFunc[editFileToolInput, st
 	}
 }
 
-func editFileTool(sessionID string) tool.BaseTool {
+func EditFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		editFileToolInfo(),
 		editFileToolInvoke(sessionID),
 	)
 }
 
-func writeOutlineFileTool(sessionID string) tool.BaseTool {
+func WriteOutlineFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		writeOutlineFileToolInfo(),
 		writeOutlineFileToolInvoke(sessionID),
@@ -250,7 +250,7 @@ func writeOutlineFileToolInvoke(sessionID string) utils.InvokeFunc[writeOutlineF
 	}
 }
 
-func readOutlineFileTool(sessionID string) tool.BaseTool {
+func ReadOutlineFileTool(sessionID string) tool.BaseTool {
 	return utils.NewTool(
 		readOutlineFileToolInfo(),
 		readOutlineFileToolInvoke(sessionID),
