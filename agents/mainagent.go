@@ -18,10 +18,13 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func NewMainAgent(ctx context.Context, sessionID string, userID uint, rulesContent string) (*Agent, error) {
-	mdb, err := mongodb.NewMongoDB()
-	if err != nil {
-		return nil, err
+func NewMainAgent(ctx context.Context, mdb *mongodb.MongoClient, sessionID string, userID uint, rulesContent string) (*Agent, error) {
+	var err error
+	if mdb == nil {
+		mdb, err = mongodb.NewMongoDB()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sess, err := session.NewSession(ctx, sessionID, userID, mdb)

@@ -28,9 +28,10 @@ type ruleSelectionResult struct {
 }
 
 // RunWithRules 在调用 NewMainAgent 前执行意图分析，筛选并注入相关 rules。
-func RunWithRules(ctx context.Context, sessionID string, userID uint, enabledRules []mongodb.Rule, intent *GenerationIntent) (*Agent, error) {
+// mdb 为可选共享连接，nil 时 NewMainAgent 内部自建。
+func RunWithRules(ctx context.Context, mdb *mongodb.MongoClient, sessionID string, userID uint, enabledRules []mongodb.Rule, intent *GenerationIntent) (*Agent, error) {
 	rulesContent := buildRulesContent(ctx, enabledRules, intent)
-	return NewMainAgent(ctx, sessionID, userID, rulesContent)
+	return NewMainAgent(ctx, mdb, sessionID, userID, rulesContent)
 }
 
 // buildRulesContent 通过 Eino Chain 执行规则筛选，失败时降级注入全部规则。
