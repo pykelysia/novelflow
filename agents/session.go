@@ -23,6 +23,13 @@ type SessionPart struct {
 	UpdatedAt time.Time `bson:"updated_at"`
 }
 
+// MessageStore abstracts session message persistence, allowing the middleware
+// layer to remain independent of the concrete storage backend.
+type MessageStore interface {
+	Append(msg Message) error
+	Load() []adk.Message
+}
+
 type Session struct {
 	SessionPart SessionPart
 	mongoClient *mongodb.MongoClient
@@ -89,7 +96,7 @@ func (s *Session) Append(msg Message) error {
 	return err
 }
 
-func (s *Session) Use() (msgs []adk.Message) {
+func (s *Session) Load() (msgs []adk.Message) {
 	cursor, err := s.mongoClient.Database("novelflow").Collection("messages").Find(
 		context.TODO(),
 		bson.D{{Key: "session_id", Value: s.SessionPart.SID}},
