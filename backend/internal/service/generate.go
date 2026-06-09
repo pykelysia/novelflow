@@ -10,8 +10,10 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	agent "novelflow/agents"
+	"novelflow/agents/core"
 	"novelflow/backend/internal/servicecontext"
 	"novelflow/cache"
 	"novelflow/database/task"
@@ -23,12 +25,29 @@ import (
 const MaxConcurrentGenerations = 5
 
 type GenerateService struct {
-	sem chan struct{}
+	sem      chan struct{}
+	registry *core.AgentRegistry
 }
 
-func NewGenerateService() *GenerateService {
-	return &GenerateService{
-		sem: make(chan struct{}, MaxConcurrentGenerations),
+func NewGenerateService(ctx context.Context) *GenerateService {
+	s := &GenerateService{
+		sem:      make(chan struct{}, MaxConcurrentGenerations),
+		registry: core.NewAgentRegistry(),
+	}
+	go s.runEviction(ctx)
+	return s
+}
+
+func (s *GenerateService) runEviction(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.registry.EvictExpired(30 * time.Minute)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
@@ -257,11 +276,16 @@ func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, pare
 		Style:        req.Style,
 		Requirements: req.Requirements,
 	}
-	a, err := agent.RunWithRules(ctx, sessionID, userID, enabledRules, intent)
-	if err != nil {
-		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
-		invalidateTaskCache(ctx, svc.RedisClient, sessionID)
-		return
+
+	a, ok := s.registry.Get(sessionID)
+	if !ok {
+		a, err = agent.RunWithRules(ctx, svc.MongoDB, sessionID, userID, enabledRules, intent)
+		if err != nil {
+			task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
+			invalidateTaskCache(ctx, svc.RedisClient, sessionID)
+			return
+		}
+		s.registry.Set(sessionID, a)
 	}
 
 	err = a.RunA(ctx, agent.Message{
@@ -271,6 +295,7 @@ func (s *GenerateService) runGeneration(svc *servicecontext.ServiceContext, pare
 	}, func(msg agent.Message) bool {
 		return true
 	})
+	s.registry.Delete(sessionID)
 	if err != nil {
 		task.UpdateTaskStatus(ctx, svc.MongoDB, sessionID, task.TaskFailed, err.Error())
 		invalidateTaskCache(ctx, svc.RedisClient, sessionID)

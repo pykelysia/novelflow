@@ -18,7 +18,7 @@ type GenerateHandler struct {
 func NewGenerateHandler(svc *servicecontext.ServiceContext) *GenerateHandler {
 	return &GenerateHandler{
 		svc:             svc,
-		generateService: service.NewGenerateService(),
+		generateService: service.NewGenerateService(svc.Ctx),
 	}
 }
 
