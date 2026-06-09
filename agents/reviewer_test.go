@@ -16,7 +16,7 @@ func TestReviewSubAgent_NoWriteTools(t *testing.T) {
 
 	// Create main agent (which internally creates the review sub-agent).
 	// This confirms the integration path works without write tools leaking in.
-	ma, err := NewMainAgent(ctx, "", 0, "")
+	ma, err := NewMainAgent(ctx, nil, "", 0, "")
 	if err != nil {
 		t.Fatalf("NewMainAgent failed: %v", err)
 	}
