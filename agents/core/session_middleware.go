@@ -1,8 +1,10 @@
-package agent
+package core
 
 import (
 	"context"
 	"encoding/gob"
+
+	"novelflow/agents/session"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
@@ -21,10 +23,10 @@ func init() {
 // after each model response and after each round of tool calls.
 type SessionMiddleware struct {
 	*adk.BaseChatModelAgentMiddleware
-	store MessageStore
+	store session.MessageStore
 }
 
-func newSessionMiddleware(store MessageStore) *SessionMiddleware {
+func newSessionMiddleware(store session.MessageStore) *SessionMiddleware {
 	return &SessionMiddleware{store: store}
 }
 
@@ -102,13 +104,13 @@ func (m *SessionMiddleware) persistNewMessages(ctx context.Context, messages []*
 
 // schemaToMessage converts a schema.Message to the storage format used by MessageStore.
 // The encoding mirrors the format expected by Session.Load() for round-trip fidelity.
-func schemaToMessage(m *schema.Message) Message {
+func schemaToMessage(m *schema.Message) session.Message {
 	if m.Role == schema.Tool {
-		return Message{Type: ToolResultType, Role: schema.Tool, Content: m.ToolName, ToolResult: m.Content}
+		return session.Message{Type: session.ToolResultType, Role: schema.Tool, Content: m.ToolName, ToolResult: m.Content}
 	}
 	if len(m.ToolCalls) > 0 {
 		tc := m.ToolCalls[0]
-		return Message{Type: ToolResultType, Role: schema.Assistant, Content: tc.Function.Name + "\n" + tc.Function.Arguments}
+		return session.Message{Type: session.ToolResultType, Role: schema.Assistant, Content: tc.Function.Name + "\n" + tc.Function.Arguments}
 	}
-	return Message{Type: ContentType, Role: m.Role, Content: m.Content}
+	return session.Message{Type: session.ContentType, Role: m.Role, Content: m.Content}
 }

@@ -1,4 +1,4 @@
-package agent
+package core
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func getChatModel(ctx context.Context) (model.BaseChatModel, error) {
+func GetChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	isOpenAI := viper.GetString("llm.model_type")
 	baseurl := viper.GetString("llm.base_url")
 	modelname := viper.GetString("llm.model_name")
@@ -21,8 +21,7 @@ func getChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	return getModel(ctx, isOpenAI, baseurl, modelname, apiKey, max_tokens)
 }
 
-func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
-
+func GetLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 	isOpenAI := viper.GetString("lite_llm.model_type")
 	baseurl := viper.GetString("lite_llm.base_url")
 	modelname := viper.GetString("lite_llm.model_name")
@@ -33,7 +32,6 @@ func getLiteChatModel(ctx context.Context) (model.BaseChatModel, error) {
 }
 
 func getModel(ctx context.Context, flag, baseurl, modelname, apikey string, max_tokens int) (model.BaseChatModel, error) {
-
 	switch flag {
 	case "openai":
 		cm, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{

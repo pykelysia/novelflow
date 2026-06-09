@@ -1,4 +1,4 @@
-package agent
+package core
 
 import (
 	"context"
@@ -41,6 +41,6 @@ func isRetryAble(ctx context.Context, err error) bool {
 		strings.Contains(err.Error(), "Too Many Request")
 }
 
-func defaultUnknownToolHandler(ctx context.Context, name, input string) (string, error) {
+func DefaultUnknownToolHandler(ctx context.Context, name, input string) (string, error) {
 	return fmt.Sprintf("[tool error]: tool %s is not available. Please choose another tool.", name), nil
 }

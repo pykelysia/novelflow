@@ -1,9 +1,11 @@
-package agent
+package core
 
 import (
 	"context"
 	"errors"
 	"io"
+
+	"novelflow/agents/session"
 	"novelflow/database/mongodb"
 
 	"github.com/cloudwego/eino/adk"
@@ -22,16 +24,16 @@ type Config struct {
 	*mongodb.MongoClient
 	SID          string
 	SystemPrompt string
-	Session      *Session
+	Session      *session.Session
 	UserID       uint
 }
 
-type StreamFunc func(Message) bool
+type StreamFunc func(session.Message) bool
 
 func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 	var err error
 
-	config.ChatModel, err = getChatModel(ctx)
+	config.ChatModel, err = GetChatModel(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +45,13 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 		}
 	}
 
-	config.ToolsConfig.UnknownToolsHandler = defaultUnknownToolHandler
+	config.ToolsConfig.UnknownToolsHandler = DefaultUnknownToolHandler
 
-	var s *Session
+	var s *session.Session
 	if config.Session != nil {
 		s = config.Session
 	} else {
-		s, err = NewSession(ctx, config.SID, config.UserID, config.MongoClient)
+		s, err = session.NewSession(ctx, config.SID, config.UserID, config.MongoClient)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +82,7 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 	return &Agent{Runner: r, SessionID: s.SessionPart.SID}, nil
 }
 
-func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
+func (a *Agent) RunA(ctx context.Context, message session.Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
 	resp := a.Run(ctx, []*schema.Message{{Role: message.Role, Content: message.Content}}, opts...)
 	for {
 		e, flag := resp.Next()
@@ -105,23 +107,23 @@ func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFun
 					return err
 				}
 				if m.Content != "" {
-					handlerFunc(Message{Type: ContentType, Content: m.Content})
+					handlerFunc(session.Message{Type: session.ContentType, Content: m.Content})
 				}
 				if m.ReasoningContent != "" {
-					handlerFunc(Message{Type: ThinkingType, Content: m.ReasoningContent})
+					handlerFunc(session.Message{Type: session.ThinkingType, Content: m.ReasoningContent})
 				}
 			}
 		}
 
 		if tm := e.Output.MessageOutput.ToolName; tm != "" {
-			handlerFunc(Message{Type: ToolType, Content: tm})
+			handlerFunc(session.Message{Type: session.ToolType, Content: tm})
 		}
 	}
 	return nil
 }
 
 func buildSummarization(ctx context.Context) (adk.ChatModelAgentMiddleware, error) {
-	cm, err := getLiteChatModel(ctx)
+	cm, err := GetLiteChatModel(ctx)
 	if err != nil {
 		return nil, err
 	}
