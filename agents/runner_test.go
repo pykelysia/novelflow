@@ -100,7 +100,7 @@ func TestRunnerWithNoTool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("\nSession %s end\n", r.SessionPart.SID)
+	fmt.Printf("\nSession %s end\n", r.SessionID)
 }
 
 func TestRunnerSession(t *testing.T) {
@@ -141,7 +141,7 @@ func TestRunnerSession(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("\nSession %s end\n", r.SessionPart.SID)
+	fmt.Printf("\nSession %s end\n", r.SessionID)
 }
 
 func TestRunnerSkills(t *testing.T) {
@@ -194,5 +194,5 @@ func TestRunnerSkills(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("\nSession %s end\n", r.SessionPart.SID)
+	fmt.Printf("\nSession %s end\n", r.SessionID)
 }
