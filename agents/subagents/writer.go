@@ -1,7 +1,10 @@
-package agent
+package subagents
 
 import (
 	"context"
+
+	"novelflow/agents/core"
+	"novelflow/agents/tools"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
@@ -13,22 +16,22 @@ import (
 // It reads the outline and existing chapters for context, then writes new chapter
 // files following the outline's chapter plan and writing skill requirements.
 func CreateWriteAgent(ctx context.Context, sessionID string) (adk.Agent, error) {
-	cm, err := getChatModel(ctx)
+	cm, err := core.GetChatModel(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	skillsMiddleware, err := getSkillsSystem(ctx)
+	skillsMiddleware, err := core.GetSkillsSystem(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	tools := []tool.BaseTool{
-		writeFileTool(sessionID),
-		editFileTool(sessionID),
-		readOutlineFileTool(sessionID),
-		listChapterFilesTool(sessionID),
-		readFileTool(sessionID),
+	agentTools := []tool.BaseTool{
+		tools.WriteFileTool(sessionID),
+		tools.EditFileTool(sessionID),
+		tools.ReadOutlineFileTool(sessionID),
+		tools.ListChapterFilesTool(sessionID),
+		tools.ReadFileTool(sessionID),
 	}
 
 	return deep.New(ctx, &deep.Config{
@@ -38,14 +41,14 @@ func CreateWriteAgent(ctx context.Context, sessionID string) (adk.Agent, error) 
 		Instruction: writeAgentSystemPrompt,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools:                tools,
-				UnknownToolsHandler:  defaultUnknownToolHandler,
+				Tools:               agentTools,
+				UnknownToolsHandler: core.DefaultUnknownToolHandler,
 			},
 		},
 		WithoutGeneralSubAgent: true,
 		WithoutWriteTodos:      true,
 		Handlers: []adk.ChatModelAgentMiddleware{
-			skillsMiddleware, &SafeToolMiddleware{},
+			skillsMiddleware, &core.SafeToolMiddleware{},
 		},
 	})
 }

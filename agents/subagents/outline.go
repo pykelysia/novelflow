@@ -1,7 +1,10 @@
-package agent
+package subagents
 
 import (
 	"context"
+
+	"novelflow/agents/core"
+	"novelflow/agents/tools"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/adk/prebuilt/deep"
@@ -13,19 +16,19 @@ import (
 // the novel's outline/章纲. It has access to volume-outline and related
 // skill modules, and can read/write outline.md files.
 func CreateOutlineAgent(ctx context.Context, sessionID string) (adk.Agent, error) {
-	cm, err := getChatModel(ctx)
+	cm, err := core.GetChatModel(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	skillsMiddleware, err := getSkillsSystem(ctx)
+	skillsMiddleware, err := core.GetSkillsSystem(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	tools := []tool.BaseTool{
-		writeOutlineFileTool(sessionID),
-		readOutlineFileTool(sessionID),
+	agentTools := []tool.BaseTool{
+		tools.WriteOutlineFileTool(sessionID),
+		tools.ReadOutlineFileTool(sessionID),
 	}
 
 	return deep.New(ctx, &deep.Config{
@@ -35,14 +38,14 @@ func CreateOutlineAgent(ctx context.Context, sessionID string) (adk.Agent, error
 		Instruction: outlineAgentSystemPrompt,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools: tools,
-				UnknownToolsHandler: defaultUnknownToolHandler,
+				Tools:               agentTools,
+				UnknownToolsHandler: core.DefaultUnknownToolHandler,
 			},
 		},
 		WithoutGeneralSubAgent: true,
 		WithoutWriteTodos:      true,
 		Handlers: []adk.ChatModelAgentMiddleware{
-			skillsMiddleware, &SafeToolMiddleware{},
+			skillsMiddleware, &core.SafeToolMiddleware{},
 		},
 	})
 }
