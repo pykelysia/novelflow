@@ -14,7 +14,7 @@ import (
 
 type Agent struct {
 	*adk.Runner
-	*Session
+	SessionID string
 }
 
 type Config struct {
@@ -29,7 +29,7 @@ type Config struct {
 type StreamFunc func(Message) bool
 
 func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
-	var err error = nil
+	var err error
 
 	config.ChatModel, err = getChatModel(ctx)
 	if err != nil {
@@ -43,15 +43,29 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 		}
 	}
 
-	// 设置 UnknownToolsHandler 处理未定义的工具调用，让模型能够继续运行
 	config.ToolsConfig.UnknownToolsHandler = defaultUnknownToolHandler
 
-	// 添加中间件
+	var s *Session
+	if config.Session != nil {
+		s = config.Session
+	} else {
+		s, err = NewSession(ctx, config.SID, config.UserID, config.MongoClient)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Promote SystemPrompt to the agent's Instruction so it is prepended by
+	// genModelInput each turn rather than stored once in message history.
+	if config.SystemPrompt != "" && config.Instruction == "" {
+		config.Instruction = config.SystemPrompt
+	}
+
 	summarizationMW, err := buildSummarization(ctx)
 	if err != nil {
 		return nil, err
 	}
-	config.Handlers = append(config.Handlers, &SafeToolMiddleware{}, summarizationMW)
+	config.Handlers = append(config.Handlers, &SafeToolMiddleware{}, summarizationMW, newSessionMiddleware(s))
 
 	a, err := deep.New(ctx, config.Config)
 	if err != nil {
@@ -63,30 +77,11 @@ func NewAgent(ctx context.Context, config *Config) (*Agent, error) {
 		EnableStreaming: true,
 	})
 
-	var s *Session
-	if config.Session != nil {
-		s = config.Session
-	} else {
-		s, err = NewSession(ctx, config.SID, config.UserID, config.MongoClient)
-		if err != nil {
-			return nil, err
-		}
-	}
-	s.Append(Message{
-		Type:    ContentType,
-		Role:    SystemRole,
-		Content: config.SystemPrompt,
-	})
-
-	return &Agent{
-		Runner:  r,
-		Session: s,
-	}, nil
+	return &Agent{Runner: r, SessionID: s.SessionPart.SID}, nil
 }
 
 func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFunc, opts ...adk.AgentRunOption) error {
-	a.Session.Append(message)
-	resp := a.Run(ctx, a.Session.Use(), opts...)
+	resp := a.Run(ctx, []*schema.Message{{Role: message.Role, Content: message.Content}}, opts...)
 	for {
 		e, flag := resp.Next()
 		if !flag {
@@ -95,14 +90,11 @@ func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFun
 		if e.Err != nil {
 			return e.Err
 		}
-
 		if e.Output == nil || e.Output.MessageOutput == nil {
 			continue
 		}
 
-		sm := e.Output.MessageOutput.MessageStream
-		output := ""
-		if sm != nil {
+		if sm := e.Output.MessageOutput.MessageStream; sm != nil {
 			defer sm.Close()
 			for {
 				m, err := sm.Recv()
@@ -113,51 +105,16 @@ func (a *Agent) RunA(ctx context.Context, message Message, handlerFunc StreamFun
 					return err
 				}
 				if m.Content != "" {
-					handlerFunc(Message{
-						Type:    ContentType,
-						Content: m.Content,
-					})
-					output += m.Content
+					handlerFunc(Message{Type: ContentType, Content: m.Content})
 				}
 				if m.ReasoningContent != "" {
-					handlerFunc(Message{
-						Type:    ThinkingType,
-						Content: m.ReasoningContent,
-					})
+					handlerFunc(Message{Type: ThinkingType, Content: m.ReasoningContent})
 				}
 			}
 		}
-		if output != "" {
-			a.Session.Append(Message{
-				Type:    ContentType,
-				Role:    AgentRole,
-				Content: output,
-			})
-		}
-		tm := e.Output.MessageOutput.ToolName
-		if tm != "" {
-			handlerFunc(Message{
-				Type:    ToolType,
-				Content: tm,
-			})
 
-			saveMsg := Message{
-				Type: ToolResultType,
-				Role: e.Output.MessageOutput.Role,
-			}
-			role := e.Output.MessageOutput.Role
-			if sm := e.Output.MessageOutput.Message; sm != nil {
-				if role == schema.Tool && sm.Content != "" {
-					saveMsg.ToolResult = sm.Content
-				}
-				if len(sm.ToolCalls) > 0 {
-					saveMsg.Content = tm + "\n" + sm.ToolCalls[0].Function.Arguments
-				}
-			}
-			if saveMsg.Content == "" {
-				saveMsg.Content = tm
-			}
-			a.Session.Append(saveMsg)
+		if tm := e.Output.MessageOutput.ToolName; tm != "" {
+			handlerFunc(Message{Type: ToolType, Content: tm})
 		}
 	}
 	return nil
