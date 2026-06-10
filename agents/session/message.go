@@ -24,4 +24,5 @@ const (
 	ThinkingType   = "Thinking"
 	ToolType       = "Tool"
 	ToolResultType = "ToolResult"
+	SummaryType    = "Summary"
 )

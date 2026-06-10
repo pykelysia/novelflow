@@ -18,11 +18,12 @@ import (
 )
 
 type SessionPart struct {
-	SID       string    `bson:"_id"`
-	UserID    uint      `bson:"user_id,omitempty"`
-	Title     string    `bson:"title,omitempty"`
-	CreatedAt time.Time `bson:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at"`
+	SID          string    `bson:"_id"`
+	UserID       uint      `bson:"user_id,omitempty"`
+	Title        string    `bson:"title,omitempty"`
+	CreatedAt    time.Time `bson:"created_at"`
+	UpdatedAt    time.Time `bson:"updated_at"`
+	CompressedAt time.Time `bson:"compressed_at,omitempty"`
 }
 
 // MessageStore abstracts session message persistence, allowing the middleware
@@ -117,19 +118,70 @@ func (s *Session) Load() []adk.Message {
 	}
 
 	var messages []Message
-	cursor, err := s.mongoClient.Database("novelflow").Collection("messages").Find(
-		context.TODO(),
-		bson.D{{Key: "session_id", Value: s.SessionPart.SID}},
-		options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}}),
-	)
-	if err == nil {
-		defer cursor.Close(context.TODO())
-		_ = cursor.All(context.TODO(), &messages)
+
+	if !s.SessionPart.CompressedAt.IsZero() {
+		// Compressed session: load summary + messages created after compression
+		var filter bson.D
+		filter = bson.D{
+			{Key: "session_id", Value: s.SessionPart.SID},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "type", Value: SummaryType}},
+				bson.D{{Key: "created_at", Value: bson.D{{Key: "$gt", Value: s.SessionPart.CompressedAt}}}},
+			}},
+		}
+		cursor, err := s.mongoClient.Database("novelflow").Collection("messages").Find(
+			context.TODO(),
+			filter,
+			options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}}),
+		)
+		if err == nil {
+			defer cursor.Close(context.TODO())
+			_ = cursor.All(context.TODO(), &messages)
+		}
+	} else {
+		cursor, err := s.mongoClient.Database("novelflow").Collection("messages").Find(
+			context.TODO(),
+			bson.D{{Key: "session_id", Value: s.SessionPart.SID}},
+			options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}}),
+		)
+		if err == nil {
+			defer cursor.Close(context.TODO())
+			_ = cursor.All(context.TODO(), &messages)
+		}
 	}
 
 	s.rawCache = messages
 	s.loaded = true
 	return buildADKMessages(messages)
+}
+
+// Compress stores a summary message and tool result archives, then updates the
+// session to load only the summary + recent messages on future calls.
+func (s *Session) Compress(ctx context.Context, summary Message, archives []ToolResultArchive, recentMessages []Message) error {
+	summary.SessionID = s.SessionPart.SID
+	summary.CreatedAt = time.Now()
+	summary.Type = SummaryType
+
+	if _, err := s.mongoClient.Database("novelflow").Collection("messages").InsertOne(ctx, summary); err != nil {
+		return fmt.Errorf("failed to insert summary: %w", err)
+	}
+
+	for i := range archives {
+		if err := SaveArchive(ctx, s.mongoClient, archives[i]); err != nil {
+			logger.Warn("[session] failed to save archive", "id", archives[i].ID, "err", err)
+		}
+	}
+
+	s.SessionPart.CompressedAt = summary.CreatedAt
+	if err := s.Save(); err != nil {
+		return fmt.Errorf("failed to save session after compression: %w", err)
+	}
+
+	s.mu.Lock()
+	s.rawCache = append([]Message{summary}, recentMessages...)
+	s.mu.Unlock()
+
+	return nil
 }
 
 func buildADKMessages(messages []Message) []adk.Message {
